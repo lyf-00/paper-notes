@@ -1,11 +1,11 @@
 ---
-title: "Terminal Agent Environment Synthesis：五篇论文与一条数据生产线"
+title: "Terminal Agent Environment Synthesis：六篇论文与一条数据生产线"
 public: true
-description: "一小时 sharing 讲稿：比较 Endless Terminals、TMax、SkillSynth、Terminal-World 与 CLI-Universe 如何生成 task、container、verifier 和 trajectory。"
+description: "一小时 sharing 讲稿：比较 Endless Terminals、TMax、SkillSynth、Terminal-World、CLI-Universe 与 Terminal-Lego 如何生成 task、container、verifier 和 trajectory。"
 type: paper-reading
 date: 2026-07-28
 created_at: 2026-07-28T15:20:00+08:00
-paper_title: "Terminal-Agent Environment Synthesis: A Five-Paper Reading Synthesis"
+paper_title: "Terminal-Agent Environment Synthesis: A Six-Paper Reading Synthesis"
 venue: "arXiv reading synthesis"
 year: "2026"
 status: "read"
@@ -19,7 +19,7 @@ tags:
 source_url: "https://arxiv.org/abs/2601.16443"
 ---
 
-# Terminal Agent Environment Synthesis：五篇论文与一条数据生产线
+# Terminal Agent Environment Synthesis：六篇论文与一条数据生产线
 
 ## 0. 这场 sharing 想回答什么
 
@@ -27,17 +27,18 @@ source_url: "https://arxiv.org/abs/2601.16443"
 
 > 如果我们想训练一个 terminal agent，怎样把一句自然语言任务变成一个可启动、可交互、可恢复、可自动打分的环境？
 
-五篇论文恰好给出了五种取舍：
+六篇论文恰好给出了六种取舍：
 
 1. **Endless Terminals**：把生成拆成四个阶段，用硬过滤保证 container 可用、测试有效、任务可解。
 2. **TMax**：用九个正交轴直接控制多样性与难度，省掉昂贵的 teacher correctness filter，把一部分过滤推迟到 RL rollout。
 3. **SkillSynth**：先在 scenario-mediated skill graph 中采样一条最小解题路径，再让 multi-agent harness 实例化任务。
 4. **Terminal-World**：把 agent skill 当作同时包含 what / when / how 的合成原语，共同生成 instruction、environment、verifier 与 teacher guideline。
 5. **CLI-Universe**：先用真实技术材料把 task blueprint 研究扎实，再用 rubric-gated tests、hint 对照和 fail-to-pass 提高监督密度。
+6. **Terminal-Lego**：把真实 StackOverflow issue 级联生成成可执行任务，再追问固定 harness 下什么样的 inspect–act–verify trajectory 最适合教会 student。
 
 ![五篇论文的环境合成路线图](assets/paper-reading/terminal-agent-env-synthesis/five-pipelines-map.svg)
 
-*自制方法地图。五篇工作的差异并不是“pipeline 有几步”，而是把质量预算放在哪里：Endless 和 CLI-Universe 选择生成后的硬过滤，TMax 选择生成吞吐与训练时软过滤，SkillSynth 与 Terminal-World 则先约束技能及轨迹结构。*
+*自制方法地图展示前五篇以 environment synthesis 为主的路线。Terminal-Lego 复用同一组 task 做 matched-teacher 对照，把问题继续推进到 harness 与 trajectory supervision：环境可执行只是起点，交互过程是否显式暴露 observation 才决定它是否适合蒸馏。*
 
 ---
 
@@ -46,13 +47,14 @@ source_url: "https://arxiv.org/abs/2601.16443"
 | 时间 | 内容 | 目标 |
 |---:|---|---|
 | 0–5 min | terminal environment 到底是什么 | 建立统一对象：instruction、initial state、runtime、verifier、trajectory |
-| 5–10 min | 五篇论文总览 | 先给路线图，避免逐篇讲完才知道差异 |
-| 10–20 min | Endless Terminals | 讲清最朴素、最容易复现的四阶段生产线 |
-| 20–31 min | TMax | 重点讲九个采样轴、graded verifier、soft filtering |
-| 31–41 min | SkillSynth | 重点讲 scenario-mediated skill graph 与 path sampling |
-| 41–51 min | Terminal-World | 重点讲 I/E/V/G 四元组和 generate-verify-repair |
-| 51–57 min | CLI-Universe | 重点讲 evidence grounding、hint-conditional、fail-to-pass |
-| 57–60 min | 结论与讨论 | 给出可复用的“我们该怎么造环境”设计清单 |
+| 5–9 min | 六篇论文总览 | 先给路线图，避免逐篇讲完才知道差异 |
+| 9–17 min | Endless Terminals | 讲清最朴素、最容易复现的四阶段生产线 |
+| 17–26 min | TMax | 重点讲九个采样轴、graded verifier、soft filtering |
+| 26–34 min | SkillSynth | 重点讲 scenario-mediated skill graph 与 path sampling |
+| 34–42 min | Terminal-World | 重点讲 I/E/V/G 四元组和 generate-verify-repair |
+| 42–50 min | CLI-Universe | 重点讲 evidence grounding、hint-conditional、fail-to-pass |
+| 50–56 min | Terminal-Lego | 重点讲 cascaded artifacts、test review、Docker round-trip 与 Terminus-2 |
+| 56–60 min | 结论与讨论 | 给出可复用的“我们该怎么造环境”设计清单 |
 
 如果现场讨论多，可以压缩每篇的训练结果，只保留一句：
 
@@ -92,7 +94,7 @@ $$
 
 ---
 
-## 3. 五篇论文放在一张表里
+## 3. 六篇论文放在一张表里
 
 | Paper | Seed / 控制变量 | Environment realization | Verification / filtering | Harness | 规模 |
 |---|---|---|---|---|---:|
@@ -101,6 +103,7 @@ $$
 | SkillSynth | skill 的 pre/post scenario graph；path length 1–7 | planner → constructor 生成 instruction、snapshot、container、tests、oracle | oracle execution + rubric judge；verify-repair | multi-agent synthesis harness；评测用 Terminus 2 + Harbor | 3,560 usable |
 | Terminal-World | 1K skills + 76 teams + 237 graphs × 4,973 personas | initial files / setup / pytest 各自 GVR，最多 3 轮 | 五维 task judge；文件一致性；setup probing；pytest 初态必须失败 | teacher 为 DeepSeek-V3.2 + Terminus2；shared Debian sandbox | 5,723 |
 | CLI-Universe | domain × skill type × capability × engineering pillar，再做 real-world research | pull/adapt 或 synthesize assets；Docker assembly + smoke tests | rubric-gated tests；hint-free fail / hinted pass；strict fail-to-pass | trajectory teacher Kimi-K2.6；评测 Terminus 2 | 6,000 trajectories |
+| Terminal-Lego | StackOverflow accepted answer + vote filter；90+ domains | instruction → files → solution → difficulty → tests → Dockerfile 级联生成 | AST syntax + 独立 LLM review，最多 3 轮；Docker solve→test reward > 0 | 生成/验证用 Docker；trajectory 固定 Terminus-2 + tmux | 15K+ tasks / 15.3K trajectories |
 
 两个容易混淆的数字：
 
@@ -768,9 +771,136 @@ hint-free fail / hinted pass 是一个很强的 training-value filter。它可�
 
 ---
 
-## 9. 五篇工作的真正分歧
+## 9. Terminal-Lego：从环境可执行走向 trajectory 可教学
 
-### 9.1 Hard filtering vs soft filtering
+Terminal-Lego 的论文标题是 **What Makes Interaction Trajectories Effective for Training Terminal Agents?**。它用环境合成搭建 controlled substrate，真正要研究的是：在 task、harness、student 与训练 recipe 都固定时，哪种 teacher trajectory 更适合 SFT。
+
+![Terminal-Lego 官方三阶段 task construction pipeline](assets/paper-reading/terminal-agent-env-synthesis/terminal-lego-official-pipeline.jpg)
+
+*Terminal-Lego 官方 pipeline。Stage 1 从 StackOverflow 筛 source，Stage 2 级联生成六类 artifacts，Stage 2.5 用 syntax + LLM reviewer 回流修 tests，Stage 3 完成 Docker round-trip。图中把 Dockerfile 放在 tests 前；当前公开 `task_generator.py` 的实际调用顺序则是先生成并 review tests、再生成 Dockerfile，分享时应区分 paper-level design 与当前代码实现。*
+
+![Terminal-Lego 从真实 issue 到可教学 trajectory 的 pipeline](assets/paper-reading/terminal-agent-env-synthesis/terminal-lego-pipeline.svg)
+
+*自制流程图。前三个环节回答“如何从真实 issue 造出能执行、能验收的任务”；最后的固定 Terminus-2 环节回答“同一任务上，不同 teacher 暴露了什么交互监督”。这正是 Terminal-Lego 相比前五篇多出来的一层。*
+
+### 9.1 Stage 1：从 StackOverflow 收真实 failure mode
+
+source 不是随机主题词，也不是 skill list，而是 StackOverflow 的真实问题：
+
+- 覆盖 90+ technical domains、13 个大类；
+- 每个问题必须有 accepted answer，作为 practical solution signal；
+- 再用 community vote threshold 做质量过滤；
+- 保留 dependency conflict、path error、shell behavior、package install、network configuration 等真实 failure mode。
+
+这里 accepted answer 不是直接复制成 agent 回复。它是后续生成 `solve.sh` 的 grounding，使 task seed 同时带着“真实问题”和“可行解法证据”。
+
+### 9.2 Stage 2：Cascaded Task Construction
+
+官方代码明确给出的级联顺序是：
+
+```text
+instruction
+→ environment files
+→ reference solution
+→ difficulty
+→ tests: generate + review, up to 3 rounds
+→ Dockerfile
+```
+
+每一步读取上游 artifact，而不是让多个 prompt 独立猜同一个 task。最后写出 Terminal-Bench 风格目录：
+
+```text
+task_xxxxx/
+├── instruction.md
+├── task.toml
+├── environment/
+│   ├── Dockerfile
+│   └── task_file/
+├── solution/
+│   └── solve.sh
+└── tests/
+    ├── test.sh
+    └── test_outputs.py
+```
+
+公开 prompt 的 contract 很具体：
+
+| Generator | 输入 | 输出与关键约束 |
+|---|---|---|
+| Instruction | StackOverflow title、tags、body | Linux terminal task；根目录 `/app/task_file/`；明确 input/output path 与 success criteria |
+| Environment | instruction、title、tags | JSON：`files` + `directories`；生成合理 test data |
+| Solution | instruction、accepted answer、tags、已有文件列表 | 可执行 `solve.sh`；容器 `WORKDIR=/app`；处理错误并满足输出要求 |
+| Difficulty | instruction、tags | `easy / medium / hard`；按单命令、multi-step、domain knowledge 区分 |
+| Tests | instruction、files、solution、tags | `test.sh` + `test_outputs.py`；只验 solved state，禁止重新运行 `solve.sh` |
+| Dockerfile | instruction、tags | 按语言选 base image；安装依赖；`WORKDIR /app`；复制 `task_file` |
+
+代码默认使用 OpenAI-compatible chat-completions API 与 `claude-opus-4-6`，并为不同 artifact 设置不同 temperature：instruction 较高以换多样性，environment / solution / Dockerfile 较低以换稳定性，tests 更低。
+
+### 9.3 Stage 2.5：Test Review Loop
+
+tests 最多生成三轮。每轮按以下顺序检查：
+
+```text
+generate test JSON
+→ parse JSON
+→ ast.parse(test_outputs.py)
+→ independent LLM review
+→ pass: accept
+→ fail: regenerate
+```
+
+论文图中的 targeted review 列出五类缺陷：重复运行 solution、脆弱 path comparison、hardcoded value、missing imports、assertion mismatch。当前公开代码的 review prompt 显式检查其中四组问题：
+
+1. 测试是否偷偷用 subprocess 再跑 `solve.sh`；
+2. 是否依赖脆弱的 exact path；
+3. 是否缺 import 或用了不可用模块；
+4. assertions 是否与 reference solution 的实际行为一致。
+
+其中 hardcoded value 没有作为独立 checklist item，但 test-generation prompt 通过 robustness rules 部分覆盖：路径列表用 basename / suffix 比较、内容用包含或 regex、行数忽略空行、优先检查磁盘状态而非解析输出文字。这些约束本质上是在减少 verifier brittleness。
+
+一个值得在分享中指出的实现细节：公开代码在三轮都未通过 review 时，会回退到第一份可解析 candidate；如果 review API 没有返回，代码也默认通过。因此论文里的“独立 review gate”在当前实现中是 **best-effort repair**，不是绝对 hard gate。复现时若追求严格质量，应把这两个 fallback 改为 discard。
+
+### 9.4 Stage 3：Docker Round-Trip Verification
+
+validator 的闭环是：
+
+```text
+docker build image
+→ start container
+→ copy and run solution/solve.sh
+→ copy and run tests/test.sh
+→ read /logs/verifier/reward.txt
+→ keep only reward > 0
+```
+
+默认 generation workers 为 16，validation workers 为 8，每个 Docker step timeout 为 300 秒。`test.sh` 用 pytest 运行 `test_outputs.py`，并把 binary reward 写入固定路径。
+
+注意它验证的是 **post-solution positive**。从公开 validator 流程看，没有像 CLI-Universe 那样强制执行 hint-free fail，也没有明确对未解初态执行同一套 tests。因此 Terminal-Lego 的 gate 能证明 reference solution 后可通过，但不能单独证明 verifier 在初态必然失败。若把它用于 RL environment，最好额外补一个 initial-state negative check。
+
+### 9.5 Harness Engineering：Terminus-2 与 EGS
+
+trajectory collection 固定使用 Terminus-2：
+
+- 单个 Docker container 内的 headless terminal；
+- 每 turn 输出 `analysis`、`plan` 与 shell commands；
+- harness 在 tmux session 执行命令并捕获 terminal output；
+- 四个 teacher 使用同一 task substrate 与同一 interface。
+
+这样可以把差异归因到 teacher interaction behavior，而不是 scaffold。论文发现最强的 standalone solver 不一定是最好的 teacher：DeepSeek-V3.2 的 benchmark 分数低于 Claude Opus 4.6，但它的 trajectory 训练出的 Qwen3 student 更强。
+
+作者用 **Environment-Grounded Supervision（EGS）**解释这个现象：好的轨迹显式展示 `inspect → act → verify → adapt`，而不是直接跳到写操作。对应指标 **Targeted Observation Ratio（TOR）**检查 action target 是否被先前的 `cat / ls / find / grep / head / wc / diff / stat` 等 observation 覆盖。
+
+prompt intervention 也很简单：在 system instruction 中要求先充分检查环境与相关文件，并在确认目录结构和文件内容后再修改。它让 Claude 的 TOR 从 2.5% 升到 6.6%，对应的 32B student 从 15.4% 升到 19.5%。
+
+Terminal-Lego 最值得带走的一句话是：
+
+> Environment synthesis 决定任务是否可执行；harness engineering 决定轨迹是否把可复用的观察—行动关系暴露给 student。
+
+---
+
+## 10. 六篇工作的真正分歧
+
+### 10.1 Hard filtering vs soft filtering
 
 | 路线 | 何时丢弃 | 优点 | 代价 |
 |---|---|---|---|
@@ -779,20 +909,22 @@ hint-free fail / hinted pass 是一个很强的 training-value filter。它可�
 | SkillSynth | oracle + rubric，失败可 repair | instruction/tests/path 三者更一致 | harness 复杂；LLM judge 仍可能共偏 |
 | Terminal-World | 每个 artifact 都 GVR + 五维 judge | 错误定位细，repair yield 高 | agent 数多，prompt/interface 维护成本高 |
 | CLI-Universe | research、blueprint、smoke、test、hint、fail2pass 多门 | supervision density 高 | 66.4% 淘汰，单位成功样本成本可能高 |
+| Terminal-Lego | AST/LLM test review + solved-state Docker round-trip | 真实 issue 可扩展；task substrate 适合 matched-teacher 实验 | 当前开源 validator 缺强制 initial-state negative；review 有宽松 fallback |
 
 ![CLI-Universe 的质量漏斗](assets/paper-reading/cli-universe/quality-funnel.svg)
 
 *自制质量漏斗。它把 CLI-Universe 的核心设计压缩成一句话：最终 6K 不是任意成功对话，而是经过能力锚定、证据研究、环境实现、test/solution 隔离与 fail-to-pass 后留下的监督单元。*
 
-### 9.2 Diversity 到底指什么
+### 10.2 Diversity 到底指什么
 
-五篇论文的“多样性”不是一回事：
+六篇论文的“多样性”不是一回事：
 
 - Endless：task category / complexity / scenario 的**题面多样性**；
 - TMax：九个采样轴与分布平衡的**组合多样性**；
 - SkillSynth：minimal workflow path 的**trajectory diversity**；
 - Terminal-World：skill/team/graph × persona 与 104 file types 的**语义和环境多样性**；
 - CLI-Universe：真实 evidence / constraints / failure modes 的**技术情境多样性**。
+- Terminal-Lego：真实 issue domain 的**问题分布多样性**，以及固定 task 上不同 teacher 的**interaction pattern 多样性**。
 
 讲到这里可以问听众：
 
@@ -800,13 +932,13 @@ hint-free fail / hinted pass 是一个很强的 training-value filter。它可�
 
 SkillSynth 对这个问题的回答最直接：不算，必须控制 path 中出现的 scenario-skill pairs。
 
-### 9.3 Per-task image vs shared sandbox
+### 10.3 Per-task image vs shared sandbox
 
 两种工程路线：
 
 **Per-task image**
 
-- Endless、TMax、CLI-Universe；
+- Endless、TMax、CLI-Universe、Terminal-Lego；
 - isolation 强；
 - 环境更接近 artifact；
 - build/storage 成本高。
@@ -820,7 +952,7 @@ SkillSynth 对这个问题的回答最直接：不算，必须控制 path 中出
 
 SkillSynth 生成 containerized environment，但论文更关注 synthesis harness，而非镜像缓存策略。
 
-### 9.4 Verifier 不是最后补的一段 pytest
+### 10.4 Verifier 不是最后补的一段 pytest
 
 ![Terminal environment verifier 的可靠性阶梯](assets/paper-reading/terminal-agent-env-synthesis/verifier-ladder.svg)
 
@@ -841,7 +973,7 @@ TMax 的 graded verifier 与 CLI-Universe 的 fail-to-pass 可以组合：前者
 
 ---
 
-## 10. 如果我们自己搭一条 pipeline
+## 11. 如果我们自己搭一条 pipeline
 
 我会采用下面的混合方案：
 
@@ -953,15 +1085,21 @@ not pass@k = 0.0
 - agent harness version；
 - model / sampling config；
 - command / observation；
+- observation target 与后续 action target 的 path alignment；
 - verifier output；
 - terminal reason；
 - hint visibility。
 
-这样之后才能判断 gain 来自 task、harness、teacher 还是 training recipe。
+从 Terminal-Lego 学，再加两组数据质量指标：
+
+- `inspect → act → verify` 的 turn pattern 与 TOR；
+- 同一批 task 上的 matched-teacher rollout，避免把 task difficulty 误当作 teacher quality。
+
+这样之后才能判断 gain 来自 task、harness、teacher 还是 training recipe。trajectory 过滤也不应只看成功：高 TOR 的 structured failure 可能比“直接猜中答案”的短成功轨迹更有教学价值。
 
 ---
 
-## 11. Sharing 时可以现场展示的三个例子
+## 12. Sharing 时可以现场展示的三个例子
 
 ### Example A：空测试
 
@@ -1029,7 +1167,7 @@ hint-guided solution passes
 
 ---
 
-## 12. 最后五分钟的结论
+## 13. 最后五分钟的结论
 
 ### 结论一：环境才是 agent RL 的 supervision unit
 
@@ -1086,7 +1224,7 @@ state → action → observation → state transition → executable reward
 
 ---
 
-## 13. 讨论问题
+## 14. 讨论问题
 
 1. o3 pass@16 全失败的 task，是坏任务，还是超出当前 teacher 能力的好任务？
 2. TMax 把 zero-pass task 推到 RL 时过滤，节省了生成成本，但会浪费多少 rollout compute？
@@ -1095,10 +1233,11 @@ state → action → observation → state transition → executable reward
 5. shared sandbox 与 per-task image，哪个更容易发生 hidden dependency leakage？
 6. verifier 与 task 由同一模型家族生成时，怎样发现 shared misconception？
 7. failed trajectories 应该用于 SFT、RL、preference learning，还是只做 error mining？
+8. TOR 奖励 agent 多观察，但怎样防止为了指标机械地重复 `cat` / `ls`，而不增加真正的 environment grounding？
 
 ---
 
-## 14. Prompt / code / harness 复现索引
+## 15. Prompt / code / harness 复现索引
 
 | Paper | Prompt availability | Code / harness availability | 分享时应怎样表述 |
 |---|---|---|---|
@@ -1107,6 +1246,7 @@ state → action → observation → state transition → executable reward
 | SkillSynth | 公开 graph/trajectory extraction prompts；未完整公开 constructor prompt | 论文公开 harness 结构 | 讲 schema 与 control flow，不声称完整复现 |
 | Terminal-World | 论文附录 D 给出完整分角色 prompt templates | 论文给 Terminus2 JSON prompt 与 shared sandbox 规格 | 最适合讲 prompt decomposition |
 | CLI-Universe | 未公开逐字 prompt | 未公开 synthesis implementation；评测用 Terminus 2 | 明确“论文级流程可知，实现参数未披露” |
+| Terminal-Lego | 公开 generation / test-review / Dockerfile prompt templates | 公开 task generator 与 Docker validator；trajectory 固定 Terminus-2 | 可以逐字段讲 6 个 generator，并指出 review fallback 与 initial-negative 缺口 |
 
 ---
 
@@ -1119,3 +1259,6 @@ state → action → observation → state transition → executable reward
 - [Toward Scalable Terminal Task Synthesis via Skill Graphs (SkillSynth)](https://arxiv.org/abs/2604.25727)
 - [Terminal-World: Scaling Terminal-Agent Environments via Agent Skills](https://arxiv.org/abs/2605.20876)
 - [CLI-Universe: Towards Verifiable Task Synthesis Engine for Terminal Agents](https://arxiv.org/abs/2606.22883)
+- [What Makes Interaction Trajectories Effective for Training Terminal Agents? (Terminal-Lego)](https://arxiv.org/abs/2606.03461)
+- [Terminal-Lego code and generation prompts](https://github.com/SWE-Lego/terminal-lego)
+- [Terminal-Lego project page](https://stephen0808.github.io/terminal-lego.github.io/)
