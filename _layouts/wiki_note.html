@@ -1,0 +1,81 @@
+---
+layout: default
+---
+
+{% assign fixed_content = content | replace: 'src="assets/', 'src="../assets/' | replace: 'href="assets/', 'href="../assets/' %}
+{% assign back_url = '/wiki/' %}
+{% assign back_label = 'Wiki' %}
+{% if page.type == 'paper-reading' %}
+    {% assign back_url = '/paper-reading/' %}
+    {% assign back_label = 'Paper Reading' %}
+{% endif %}
+
+<div class="reading-progress" aria-hidden="true">
+    <span></span>
+</div>
+
+<div class="blog-layout-wrapper{% if page.reading_surface %} reading-surface-layout{% endif %}">
+    <div class="blog-main">
+        <div class="mb-3">
+            <a class="small" href="{{ back_url | relative_url }}">
+                <i class="fas fa-arrow-left"></i> {{ back_label }}
+            </a>
+        </div>
+
+        <details class="mobile-toc d-lg-none">
+            <summary>目录</summary>
+            <div id="blog-toc-list-mobile" class="mobile-toc-list"></div>
+        </details>
+
+        <article class="bg-white rounded-xl p-4 p-md-5 mb-4 wiki-note-card{% if page.reading_surface %} reading-surface-card{% endif %}" data-pagefind-body{% if page.reading_surface %} data-reading-surface{% endif %}{% if page.kicker %} data-kicker="{{ page.kicker }}"{% endif %}>
+            <div class="blog-content wiki-note">
+                {{ fixed_content }}
+            </div>
+        </article>
+
+        {% assign needle = page.url | split: '/' | last %}
+        {% assign backlinks = "" | split: "" %}
+        {% for p in site.pages %}
+            {% if p.public and p.url != page.url and p.url contains '.html' %}
+                {% if p.content contains needle %}
+                    {% assign backlinks = backlinks | push: p %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        {% if backlinks.size > 0 %}
+        <aside class="note-backlinks" aria-label="Backlinks">
+            <div class="note-backlinks-title">引用了本文的笔记</div>
+            <ul class="note-backlinks-list">
+                {% for p in backlinks %}
+                <li>
+                    <a href="{{ p.url | relative_url }}">{{ p.title }}</a>
+                    {% if p.description %}<span class="note-backlinks-desc">{{ p.description }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </aside>
+        {% endif %}
+    </div>
+
+    <aside class="blog-toc-sidebar">
+        <nav id="blog-toc" class="blog-toc-nav" aria-label="Table of contents">
+            <div class="blog-toc-header">
+                <div class="blog-toc-title">On This Page</div>
+                <button
+                    id="blog-toc-toggle"
+                    class="blog-toc-toggle"
+                    type="button"
+                    aria-controls="blog-toc-list"
+                    aria-expanded="true"
+                    aria-label="收起目录"
+                    title="收起目录"
+                >
+                    <svg class="blog-toc-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="blog-toc-list" class="blog-toc-list"></div>
+        </nav>
+    </aside>
+</div>

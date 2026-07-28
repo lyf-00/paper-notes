@@ -1,0 +1,15 @@
+{
+  "name": "paper-notes",
+  "private": true,
+  "scripts": {
+    "build": "npm run check:figures:gate && bundle exec jekyll build && pagefind --site _site",
+    "build:site": "bundle exec jekyll build",
+    "build:search": "pagefind --site _site",
+    "audit:figures": "python3 scripts/audit_paper_reading_visuals.py",
+    "check:figures": "python3 scripts/check_paper_reading_figures.py",
+    "check:figures:gate": "python3 scripts/check_paper_reading_figures.py --baseline scripts/paper_reading_figure_debt.json"
+  },
+  "devDependencies": {
+    "pagefind": "1.5.2"
+  }
+}

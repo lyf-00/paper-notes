@@ -1,0 +1,42 @@
+title: Paper Notes
+url: "https://lyf-00.github.io"
+baseurl: "/paper-notes"
+lang: zh-CN
+
+markdown: kramdown
+kramdown:
+  input: GFM
+
+timezone: Asia/Shanghai
+
+exclude:
+  - .skills
+  - .bundle
+  - .obsidian
+  - AGENTS.md
+  - docs
+  - Gemfile
+  - Gemfile.lock
+  - LICENSE-academic-homepage
+  - node_modules
+  - package.json
+  - package-lock.json
+  - preview-*.png
+  - README.md
+  - scripts
+  - vendor
+
+collections:
+  - news
+
+defaults:
+  - scope:
+      path: "wiki"
+      type: "pages"
+    values:
+      layout: wiki_note
+  - scope:
+      path: "paper-reading"
+      type: "pages"
+    values:
+      layout: wiki_note

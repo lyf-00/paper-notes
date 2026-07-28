@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Paper Notes"
+  short_description: "Maintain a Jekyll paper-reading site"
+  default_prompt: "Use $maintain-paper-notes to add or revise a paper note and verify the site before release."

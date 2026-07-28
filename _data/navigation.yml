@@ -1,0 +1,7 @@
+pages:
+  - name: Home
+    url: /
+  - name: Wiki
+    url: /wiki/
+  - name: Paper Reading
+    url: /paper-reading/

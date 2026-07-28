@@ -1,0 +1,91 @@
+---
+layout: default
+---
+
+{% assign public_notes = site.pages | where: "public", true %}
+{% assign recent_wiki = public_notes | where_exp: "note", "note.type != 'paper-reading'" | sort: "date" | reverse %}
+{% assign recent_papers = public_notes | where: "type", "paper-reading" | sort: "created_at" | reverse %}
+
+<div class="row">
+    <div class="col-lg-3 col-md-4">
+        {% include widgets/profile_card_mini.html %}
+    </div>
+    <div class="col-lg-9 col-md-8">
+        {% assign homepage_content = content | strip %}
+        {% if homepage_content != "" %}
+        <div class="my-3 bg-white shadow-sm rounded-xl">
+            <div class="p-4 home-content">
+                {{ content }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recent_wiki.size > 0 %}
+        <div class="my-3 bg-white shadow-sm rounded-xl">
+            <div class="p-4">
+                <div class="home-card-header">
+                    <div class="h3 mb-0">Latest Wiki</div>
+                    <a class="home-card-more" href="{{ '/wiki/' | relative_url }}">
+                        All notes <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="home-note-list">
+                    {% for note in recent_wiki limit: 3 %}
+                    <a class="home-note-item" href="{{ note.url | relative_url }}">
+                        <div class="home-note-main">
+                            <div class="home-note-title">{{ note.title }}</div>
+                            {% if note.description %}
+                            <div class="home-note-desc">{{ note.description }}</div>
+                            {% endif %}
+                        </div>
+                        {% if note.date %}
+                        <time class="home-note-date" datetime="{{ note.date | date_to_xmlschema }}">
+                            {{ note.date | date: "%Y-%m-%d" }}
+                        </time>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recent_papers.size > 0 %}
+        <div class="my-3 bg-white shadow-sm rounded-xl">
+            <div class="p-4">
+                <div class="home-card-header">
+                    <div class="h3 mb-0">Latest Paper Reading</div>
+                    <a class="home-card-more" href="{{ '/paper-reading/' | relative_url }}">
+                        All notes <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="home-note-list">
+                    {% for note in recent_papers limit: 3 %}
+                    <a class="home-note-item" href="{{ note.url | relative_url }}">
+                        <div class="home-note-main">
+                            <div class="home-note-title">{{ note.title }}</div>
+                            {% if note.description %}
+                            <div class="home-note-desc">{{ note.description }}</div>
+                            {% endif %}
+                        </div>
+                        {% assign paper_date = note.created_at | default: note.date %}
+                        {% if paper_date %}
+                        <time class="home-note-date" datetime="{{ paper_date | date_to_xmlschema }}">
+                            {{ paper_date | date: "%Y-%m-%d" }}
+                        </time>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if site.data.display.homepage.show_news %}
+        {% assign count_news = site.news | size %}
+        {% if count_news > 0 %}
+        {% include widgets/news_card.html limit=site.data.display.homepage.num_news %}
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
