@@ -906,6 +906,16 @@ Output JSON:
 
 #### Stage 1：Task blueprint construction
 
+Stage 1 不是一次 prompt 直接产出题面，而是原文明确拆成三个子阶段：
+
+```text
+Task Candidate Specification
+→ Evidence-Guided Refinement
+→ Blueprint Formation and Validation
+```
+
+**1. Task Candidate Specification**
+
 候选任务由四维 anchor 定义：
 
 | Dimension | 问题 |
@@ -915,7 +925,17 @@ Output JSON:
 | Capability | 希望触发 exploration、recovery、planning 等哪种行为 |
 | Engineering pillar | 新功能、debug、deployment、systems programming 等哪类工作 |
 
-然后 research agent 搜索：
+每个 domain 都有后三个维度各自允许的 value pool。系统先从池中采样组合，再围绕这个 anchor brainstorm task ideas；idea 必须真正触发指定 capability，而不只是换一个表面主题。候选按三项打分：
+
+- **creativity**：不是已有模板的轻微改写；
+- **technical grounding**：有具体技术机制可以支撑；
+- **feasibility**：能在可得工具与隔离环境中实现和验证。
+
+只有高分 idea 进入下一步。
+
+**2. Evidence-Guided Refinement**
+
+research agent 迭代搜索：
 
 - repositories；
 - official docs；
@@ -923,16 +943,26 @@ Output JSON:
 - tutorials；
 - usage examples。
 
-研究结果被编译进 blueprint：
+它不是把链接当作 citation 附在题面后，而是逐轮把证据编译成：
+
+- specific tools 与版本；
+- realistic constraints；
+- 真实出现过的 failure modes；
+- concrete input/output contracts。
+
+refinement 会持续到 specification 足以支持后面的 query formulation、environment construction 和 test generation。需要不可得工具、技术材料不足或约束互相冲突的候选会被丢弃。
+
+**3. Blueprint Formation and Validation**
+
+研究结果最终被编译成三个核心 artifact：
 
 - `Instruction.md`；
 - internal `Hint.md`；
-- environment checklist；
-- validation target；
-- concrete I/O contract；
-- known failure modes 与工具约束。
+- environment checklist。
 
-如果技术材料不足、工具不可得或约束冲突，候选直接丢弃。
+其中 Instruction 是 agent 可见的任务；Hint 只提供给 reference-solution agent，记录关键 resolution steps 与 expected intermediate states；environment checklist 则把资产、依赖、服务、路径和运行条件交给 Stage 2。validation target、I/O contract、failure modes 与工具约束分别被写进这三个 artifact，而不是额外独立的公开文件。
+
+进入 Stage 2 前，blueprint 还要通过 rubric review：specification 必须足够清晰，environment setup 必须允许稳定构建和可靠的 downstream verification。这个 gate 的效果由后面的 Figure 2(b) 验证：human accept rate 从 72% 升到 91%，LLM accept rate 从 75% 升到 93%。
 
 #### Stage 2：Environment realization
 
@@ -988,9 +1018,11 @@ tests(after hinted solution) = pass
 
 最终只有 33.6% 候选留存。
 
+论文专门用 Figure 2 给三个 pipeline stage 配了佐证实验，而不是只展示最终分数：(a) 验证 Stage 1 的 evidence refinement 是否真的提高难度，(b) 验证 blueprint rubric，(c) 验证合成 tests 与人工 benchmark tests 的一致性；(d) 汇总五道过滤门的留存率，(e) 再看最终数据效率。
+
 ![CLI-Universe 各阶段证据、候选留存与数据效率](assets/paper-reading/cli-universe/source-filtering-evidence-figure.png)
 
-*原论文 Figure 2。作者不是只报告最终淘汰率，而是给每个阶段绑定可观察证据：research refinement 让平均 solver turns 从 5.34 升到 18.43、pass rate 下降 13.3 points；blueprint review 后人类/模型接受率升至 91%/93%；合成 tests 与 Terminal-Bench 2 ground truth 达到 91% pass agreement 和 88% semantic match；五层过滤最终保留 33.6%。右下图进一步显示 CLI-Universe 用更少的 training trajectories 达到有竞争力的 TB-2.0 分数。*
+*原论文 Figure 2，已替换为从 PDF 4× 渲染后按整张 figure 精确裁剪的高清版本。research refinement 让平均 solver turns 从 5.34 升到 18.43、pass rate 下降 13.3 points；blueprint review 后人类/模型接受率升至 91%/93%；合成 tests 与 Terminal-Bench 2 ground truth 达到 91% pass agreement 和 88% semantic match；五层过滤最终保留 33.6%。右下图进一步显示 CLI-Universe 用更少的 training trajectories 达到有竞争力的 TB-2.0 分数。*
 
 ### Prompt 和 harness 的披露边界
 
@@ -1017,9 +1049,75 @@ Endless 只问“强模型能否至少解出一次”；CLI-Universe 多问了�
 
 hint-free fail / hinted pass 是一个很强的 training-value filter。它可能丢掉本来就容易但仍有用的任务，也依赖 hint 的质量；但它让最终 6K trajectory 的监督密度明显高于“只要成功就收”。
 
+### Ablation：pipeline 组件之外，数据该怎样选
+
 ![CLI-Universe 的组件消融、模型扩展与数据效率](assets/paper-reading/cli-universe/source-ablation-scaling-figure.png)
 
-*原论文 Figure 3。完整 pipeline 得分 26.7；移除 asset strategy、query rubric 或 test-case rubric 分别降到 20.5、23.3、22.8，说明收益不是某一个 verifier 独立带来的。同一 6K 数据对 8B、14B、32B 分别带来 +8.4、+19.0、+30.0，且相较 TerminalTraj 与 Nemotron 显示更高的数据效率，提示高密度环境监督没有在小规模数据处立即饱和。*
+*原论文 Figure 3，高清重裁版本。组件消融在 1K-task subset、Qwen3-32B 上进行：完整 pipeline 得分 26.7；移除 asset strategy、query rubric 或 test-case rubric 分别降到 20.5、23.3、22.8，说明收益不是某一个 verifier 独立带来的。同一 6K 数据对 8B、14B、32B 分别带来 +8.4、+19.0、+30.0，且相较 TerminalTraj 与 Nemotron 显示更高的数据效率。*
+
+Figure 3 消融的是 pipeline components；原论文 Table 2 还有两个容易漏掉的 **data-side ablation**：
+
+![CLI-Universe Table 2：trajectory selection 与 teacher model ablation](assets/paper-reading/cli-universe/source-table2-ablation.png)
+
+*原论文 Table 2，按两张小表的边界精确裁剪。所有实验的 student 都是 Qwen3-32B，指标是 Terminal-Bench 2.0 avg@4。*
+
+**(a) Trajectory selection**
+
+- `Complete (all kept)`：保留 10K 条成功、失败和未完成轨迹，得 28.2；
+- `Success-only`：只保留通过全部 tests 的 6K 条轨迹，得 33.4。
+
+数据量减少 40%，分数反而提高 **5.2 points**。这个实验支持的是一个有限但重要的结论：在本文的多轮 SFT 和 32B student 设置下，失败/未完成 interaction 带来的监督噪声大于额外数据量的收益；它不等价于“失败轨迹对 RL、preference learning 或 error mining 永远没用”。
+
+**(b) Teacher model**
+
+- DeepSeek-V4-Pro：同一批 CLI-Universe tasks 上采 6K trajectories，student 得 31.2；
+- Kimi-K2.6：同样采 6K，student 得 33.4。
+
+Kimi teacher 高 **2.2 points**，说明 teacher 质量仍会影响最终 student；但更换 teacher 后仍能保持 31.2，也说明收益不只来自某个特定 teacher，pipeline 本身提供了相当一部分稳定监督。
+
+### 泛化与仍未覆盖的类别
+
+![CLI-Universe Figure 4：跨 benchmark 与细粒度类别结果](assets/paper-reading/cli-universe/source-generalization-figure.png)
+
+*原论文 Figure 4。32B 在 BFCL-v4 从 46.7 提升到 58.0，在 VitaBench 从 15.4 提升到 27.0；TB 2.0 上 Data Processing、Machine Learning、Data Querying、Model Training 的增益最大。Games 与 Video Processing 没有提升，不过这两类各只有 1 个评测样本，适合视为待扩充方向，不宜读成稳定的能力结论。*
+
+### Error study：模型究竟在哪里失败
+
+分析过程不是让 judge 给一条轨迹贴多个宽泛标签，而是：
+
+1. 对 Terminal-Bench 2 的每个 task、每个模型运行 **2 条 trajectory rollouts**；
+2. 只分析 failed trajectories；
+3. 用 **Codex + GPT-5.4** 阅读完整轨迹；
+4. 从 9 种 failure modes 中只选一个“对失败最具因果责任”的 primary mode；
+5. 标签互斥，因此每个模型的一行加总为 100%。
+
+九种错误分成三组：
+
+| Class | Failure modes |
+|---|---|
+| Execution | disobey specification；step repetition；unaware of termination |
+| Coherence | context loss；task derailment；reasoning-action mismatch |
+| Verification | premature termination；no/incorrect verification；weak verification |
+
+![CLI-Universe Figure 5：失败轨迹的 primary failure attribution](assets/paper-reading/cli-universe/source-failure-attribution-figure.png)
+
+*原论文 Figure 5，高清重裁版本。颜色不是性能高低，而是“已经失败的轨迹内部，主要失败原因如何分布”；因此不能从某个色块较小直接推出该模型绝对更强。*
+
+**Frontier models 欠缺在哪里**
+
+- Claude-Opus-4.6、GPT-5.3-Codex、GLM-5、DeepSeek-V4-Pro 的最大类都是 **Verification**，占失败的 47%–60%。它们通常已经做出看似合理的实现，但没有可靠确认 goal state 是否真的满足。
+- frontier models 又分成两种相反风格。Opus 更常是 **weak verification**：做了检查但太浅，36%，而 GPT 为 10%；GPT 更常是 **no/incorrect verification**：跳过检查或检查错对象，47%，而 Opus 为 20%。
+- GLM-5 与 DeepSeek-V4-Pro 更接近 GPT 的 verification pattern，但 execution failure 更吵，Execution 占 28%–31%，高于 Opus 的 16% 与 GPT 的 23%。
+
+所以前沿模型的主要问题不是“完全不会开始”，而是最后一公里：把“我做过一些修改”误当成“任务已经被独立验证完成”。
+
+**CLI-Universe-32B 欠缺在哪里**
+
+- Verification share 降到 27%，但 **Execution** 上升为最大类，占 44%；
+- 最突出的单项是 **step repetition 23%**，而四个 frontier baselines 只有 0%–7%；
+- 它更常在执行中陷入循环：重复同一命令、重新推导已知事实、修补同一个 bug，却不能保持稳定进展。
+
+这表示 32B 的瓶颈已经与 frontier model 不同：训练数据强化了验证相关行为后，主要短板转向 long-horizon execution stability、working memory 与 loop breaking。严格说 Figure 5 展示的是 failure-profile shift，不能单凭相关性证明某个训练组件“治好了”验证；但它非常明确地指出下一轮数据合成不应只继续堆 tests，还要专门构造需要记住既有事实、检测重复动作并主动换策略的任务。
 
 ---
 
