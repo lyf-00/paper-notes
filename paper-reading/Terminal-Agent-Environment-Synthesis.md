@@ -276,13 +276,29 @@ TMax 的九个采样轴：
 | Fixture | text、image、audio、video、binary、vendored package、multi-service | 输入形态 |
 | Verifier | exact text、metric、adversarial、fuzz、multi-protocol | reward 形态 |
 
-它的采样并非简单笛卡尔积。代码里还做了：
+它的采样并非简单笛卡尔积。九个轴定义的是任务分布的**坐标系**，代码并不会枚举所有组合，而是为每个任务执行一次有条件、有权重的顺序采样。完整实现可跳转到 [`random_user_msg`](https://github.com/hamishivi/tmax/blob/master/rl_data/generator/task_template_gen.py#L1190-L1295)，v2 的 bucket weighting 在 [`_bucket_upweight_choice`](https://github.com/hamishivi/tmax/blob/master/rl_data/generator/task_template_gen.py#L612-L685)。
 
-- language weighted sampling，Python 仍占最高权重；
-- 每题随机选 3–5 个 primitive skills；
-- real-software scenario anchor 以约 0.35 概率注入；
-- `rl_v2` 对 intricate task、非 legacy fixture 和 verifier 做上采样；
-- 任何新型 fixture/verifier 任务路由到预装 OCR、ffmpeg、binutils、科学计算库的 `base_intricate` image。
+具体过程是：
+
+1. 从 9 个 domain 中均匀抽取一个；
+2. 只从该 domain 内抽一个 `skill_type`；
+3. 将该 domain 下**所有** skill type 的 primitive skills 合并，再无放回抽取 3–5 个；
+4. 从该 domain 对应的 persona/scenario 池采样，而不是从全局 persona 池采样；
+5. 以 0.35 概率加入一个 real-software anchor，例如 “JWT implementation accepts `algorithm=none`”；
+6. 按人工权重抽语言，而非均匀抽样：Python 0.35，C/Bash 各 0.15，C++ 0.10，Rust/Go 各 0.07；
+7. 根据 `corpus_kind` 再决定 complexity、fixture 和 verifier 的分布。
+
+这里有个容易忽略的细节：`skill_type` 是任务的主类别，但 primitive skills 并不局限于这个 skill type，而是可跨同一 domain 下的其他类别。例如一题的主类别可以是 `Algorithmic`，同时组合 token validation、authentication testing 和 reverse engineering。这比在固定小类里机械拼接更容易产生跨技能 workflow。
+
+`rl_v2` 的 weighting 也不是笼统的“多采一点难题”：
+
+| Axis | 5k `rl_v2` 内部采样 | 与 10k legacy 合并后的 15k 分布 |
+|---|---|---|
+| Task complexity | `intricate` 概率 75%；其余三个难度共享 25% | short / moderate / complex / intricate 各约 25% |
+| Verifier | 不再抽 `exact_text`；四种新 verifier 均匀采样 | `exact_text` 约 66.7%；四种新 verifier 各约 8.3% |
+| Fixture | 不再抽 `text_only`；六种新 fixture 均匀采样 | `text_only` 约 66.7%；六种新 fixture 各约 5.6% |
+
+因此，“九轴组合”更准确地说是一个 factorized but conditional distribution：domain 决定 skill/persona 候选池，`corpus_kind` 决定新旧 bucket 的概率，抽出的 signature 再交给 LLM 实例化。即使 signature 相同，LLM 仍可能生成不同的 task。任何新型 fixture/verifier，或 complexity 为 `intricate` 的任务，都会路由到预装 OCR、ffmpeg、binutils 和科学计算库的 `base_intricate` image。
 
 ### Prompt contract
 
@@ -307,7 +323,9 @@ User:
   fixture_kind
 ```
 
-`<truth>` 不是简单答案字符串，而必须声明：
+`<truth>` 不是给 agent 看的标准答案，也不是 SFT 的 target；它更像 task generator 与 verifier generator 之间的 **privileged rubric / intermediate representation**。它不是严格 JSON schema，而是一段半结构化文本，所以不同任务里的内容可能差异很大：有时是预期文件与数值，有时包括 setup procedure，有时主要是 verifier configuration。
+
+它必须声明：
 
 - exact paths；
 - setup 前应存在的对象；
@@ -322,6 +340,8 @@ User:
 - `fuzz_equivalence`：oracle path、input distribution、N、agent executable；
 - `multi_protocol`：host:port、protocol request/response、credentials。
 
+final-test generator 会同时读取 `description`、`truth` 与 initial-state test，再生成 `test_final_state.py`。但它也被明确要求：把 truth 当作 rubric 的**意图**，而不是无条件可信的常数；如果 expected value 可以从输入重新计算，就应在 verifier 中重新计算，而不是直接复制 opaque literal。对应代码见 [`completion_test_gen.py`](https://github.com/hamishivi/tmax/blob/master/rl_data/generator/completion_test_gen.py)。
+
 然后独立生成：
 
 1. initial-state pytest；
@@ -331,19 +351,86 @@ User:
 
 公开实现默认 task prompt `temperature=1.0`，initial/final test prompt `temperature=0.6`，每次最多 2,048 tokens。
 
+### 一个真实 task：从 signature 到 reward
+
+公开的 [`TMax-15K` 数据集](https://huggingface.co/datasets/TMaxxx/TMax-15K)直接保留了 `description`、`truth`、initial/final test 和 container definition。以 [`task_000004_b4949f3f`](https://huggingface.co/datasets/TMaxxx/TMax-15K/viewer/default/train?row=9) 为例：
+
+```yaml
+domain: scientific_computing
+skill_type: Data Processing
+task_complexity: intricate
+command_complexity: bash-only
+scenario: data scientist fitting models
+language: Python
+fixture_kind: audio
+verifier_kind: metric_threshold
+```
+
+它不只是一个文本问答，而是完整环境任务：
+
+```text
+input fixture:
+  /app/chime_recording.wav
+  一段包含噪声的钟声音频
+
+public task:
+  估计三个衰减正弦分量的参数，并重建干净信号
+
+required output:
+  /home/user/reconstructed.wav
+```
+
+其 privileged truth 声明的不是唯一 waveform，而是验收协议：
+
+```yaml
+metric: normalized signal MSE
+threshold: MSE <= 0.02
+reference_path: /app/chime_recording.wav
+evaluated_path: /home/user/reconstructed.wav
+metric_implementation:
+  使用 scipy 读取两个 WAV，归一化振幅后计算 mean((x - y) ** 2)
+```
+
+initial-state test 先确认输入音频存在；final-state test 再确认 agent 创建了目标文件，读取两段音频，重新计算 MSE 并检查是否不超过 0.02。也就是说，`truth` 被“编译”成 verifier，而不是直接显示给 agent。
+
+```text
+sampled signature
+  → LLM: public description + privileged truth
+  → fixture + initial-state test + container
+  → LLM: truth-aware final-state pytest
+  → agent only receives public task + terminal environment
+  → harness runs final-state pytest
+  → all checks pass: reward = 1; otherwise reward = 0
+```
+
+生成阶段单个任务的目录为：
+
+```text
+task_xxx/
+├── task.json
+├── test_initial_state.py
+├── test_final_state.py
+├── container.def
+├── setup.sh
+├── fixtures/
+└── solutions/
+```
+
+原始公开数据则把它展平成一行，包含 `task_id`、九轴 metadata、`description`、`truth`、`test_initial_state`、`test_final_state` 和 `container_def`；转换成 Harbor task 后，agent-visible instruction 与隐藏 tests/verifier 分开交给 harness。
+
 ### Graded verifier 为什么比 exact text 更重要
 
 TMax 不只问“最终文件是否一字不差”，而是把难度做进 verifier：
 
-| Verifier | 例子 | 难度旋钮 |
-|---|---|---|
-| `exact_text` | 文件等于参考答案 | 无 |
-| `metric_threshold` | SSIM ≥ 0.95、speedup ≥ 1.3× | threshold |
-| `adversarial_corpus` | 恶意样本全拦截、正常样本全保留 | corpus size / pass rate |
-| `fuzz_equivalence` | 随机 N 个输入与 oracle bit-exact 一致 | N / input distribution |
-| `multi_protocol` | HTTP/TCP/gRPC/SMTP 真实请求正确 | protocol / condition 数 |
+| Verifier | truth 中需要提供什么 | verifier 如何检查 | 难度旋钮 |
+|---|---|---|---|
+| `exact_text` | 预期文本、文件结构或 checksum | 与确定性 expected state 比较 | 无 |
+| `metric_threshold` | metric 算法、reference/target、threshold、output path | 计算 SSIM、MSE、accuracy、speedup 等，再判断是否过线 | threshold |
+| `adversarial_corpus` | evil/clean 路径、双向 criterion、entry point | evil 必须拒绝/净化，clean 必须接受/保留 | corpus size / pass rate |
+| `fuzz_equivalence` | oracle path、输入分布、N、agent executable | 固定随机种子，逐个运行 oracle 与 agent 并比较输出 | N / input distribution |
+| `multi_protocol` | host:port、request/response、credentials | 发出真实 HTTP/TCP/gRPC/SMTP 请求并检查响应 | protocol / condition 数 |
 
-这比单纯增加 prompt 长度更可靠，因为它直接改变 reward surface。
+这里的 “graded” 容易让人误以为 RL 获得连续分数。实际上 TMax 的 outcome-only RL 最终仍使用二值 reward：`metric_threshold` 内部可以得到连续的 MSE/SSIM，`adversarial_corpus` 可以得到通过率，但 verifier 最后仍把它们按 criterion 转成 pass/fail。它比单纯增加 prompt 长度更可靠，是因为它改变了**验收语义和 reward boundary**，而不是因为 reward 本身变成连续值。
 
 ### 为什么 TMax 敢跳过 teacher filter
 
@@ -385,6 +472,10 @@ TMax 使用 mini-SWE-agent 风格的 **Vanillux2Agent**：
 ---
 
 ## SkillSynth：不只控制 task diversity，还控制 trajectory diversity
+
+![SkillSynth 从 skill graph 到可执行任务的总体流程](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure2-overview.png)
+
+*原论文 Figure 2。左侧从 scenario-mediated skill graph 采样一条有方向的 skill path；中间由 planner 与 constructor 把 path 实例化为环境、题面、测试和 oracle solution，并在执行验证、rubric 验证失败后进入 repair loop；右侧才是可训练的 terminal task。后文的 graph construction、path sampling 和 multi-agent harness 分别对应这张图的三个关键接口。*
 
 ### 为什么随机拼 skills 不够
 
@@ -428,6 +519,26 @@ $$
 4. **Scenario merge**：把兼容的 pre/post 合成统一 node。
 5. **Triple filter**：再次判断 `(scenario, skill, scenario)` 是否真是有效转换。
 
+#### Scenario clustering 到底在做什么
+
+论文说比较了 **9 种常见聚类算法**，最终选择“两阶段聚类”；正文和附录没有逐项列出这 9 种算法的名称，因此这里不补猜测名单。选中的流程是：
+
+```text
+scenario text
+→ embedding + normalization
+→ sparse semantic-similarity graph
+→ Louvain：先切成 coarse buckets
+→ bucket 内 complete-linkage agglomerative clustering
+→ threshold sweep + held-out 人工检查
+```
+
+- **Louvain** 把 scenario 当作图节点、相似度当作边，通过提高 modularity，把“内部连接显著更密”的节点先分到同一 community。它不需要预先指定 cluster 数，作用是把全局问题切成较小的候选桶。
+- **Agglomerative clustering** 从“每个 scenario 自成一类”开始，不断合并距离最近的两个 cluster。
+- **Complete linkage** 用两个 cluster 中“最远的那一对样本”定义 cluster 间距离。因此只有当两组里的所有 scenario 都足够接近时才会合并；它能避免 single linkage 的 chain drift：`A≈B，B≈C`，但 `A` 与 `C` 已经不是同一个状态。
+- 使用 **cosine distance**，并在 held-out scenarios 上 sweep threshold、人工检查。目标是在“合并措辞不同的同义状态”与“保留 negation、pre/post condition 改变造成的真实差异”之间取平衡。
+
+为什么要分两段？对 8 万级 scenario 直接做全局 hierarchical clustering 会产生近似全对全的距离与二次内存开销；Louvain 先粗分桶，让 complete linkage 只在局部做严格去重。
+
 最终图规模：
 
 - 82,073 scenario nodes；
@@ -435,6 +546,21 @@ $$
 - 6,251 connected components；
 - giant component 覆盖 85.6% nodes；
 - median degree 2，max degree 752。
+
+<details markdown="1">
+<summary><strong>展开：附录中的 graph coverage 与 degree distribution</strong></summary>
+
+![SkillSynth 附录 Figure 5：skill category distribution](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure5-categories.png)
+
+*Figure 5 表明图并不只覆盖 coding、automation、document processing 等高频 terminal 工作，也包含 audio、3D、legal、health、IoT 等长尾类别。类别覆盖只是静态 diversity；真正用于训练的数据还需要 path sampler 把这些节点采到。*
+
+![SkillSynth 附录 Figure 6：node degree 的 CCDF](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure6-degree.png)
+
+*Figure 6 是 degree 的 complementary CDF，横纵轴均为 log scale。degree 呈明显 heavy tail：median 为 2，而最大 hub 为 752。少数 hub 会被普通 random walk 反复穿过，这正是后面 inverse-frequency sampling 的直接动机。*
+
+论文还报告图中可枚举出 **16,632,220 条至少需要 7 个 skills 的路径**。这说明图本身提供了很大的组合空间，但并不意味着每条路径都自然、可构造或可验证；后续 sampler 与 harness 仍承担质量控制。
+
+</details>
 
 ### Path sampling
 
@@ -457,6 +583,25 @@ p(\kappa)\propto(\mu(\kappa)+1)^{-1}
 $$
 
 同一路径中不重复 scenario 或 skill，保证 monotone progression。这样控制的是训练轨迹中最低必要技能序列，而不只是题目关键词的覆盖率。
+
+![SkillSynth 原论文 Algorithm 1：Inverse-Frequency Path Sampling](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-algorithm1-path-sampling.png)
+
+*原论文 Algorithm 1，已按算法框精确裁剪。算法先按 $1/(\nu+1)$ 选择较少访问的起点；每一步只考虑未使用的 skill 与未访问的 post-scenario，再分别按 $1/(\mu+1)$、$1/(\nu+1)$ 降低高频项的概率。到达 $L_{\max}=7$ 或 dead end 时停止；只有长度合法且 skill set 未出现过的 path 才被接受，计数器也只在接受后更新。*
+
+这里有三个容易忽略的设计：
+
+1. **反频率不是绝对去重**：高频节点仍可被采到，只是概率逐渐降低。
+2. **monotone progression 是 path 内约束**：同一条 path 不走回已经访问的 scenario，也不复用 skill，避免循环和“换个说法做同一步”。
+3. **skill-set uniqueness 是 path 间约束**：如果一条新 path 使用的 skill 集合已经见过，即使 scenario 顺序不同也不进入结果集；它把预算优先留给新的能力组合。
+
+<details markdown="1">
+<summary><strong>展开：一条 graph path 如何变成具体任务</strong></summary>
+
+![SkillSynth 附录 Figure 4：video 到 GIF 的组合任务实例](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure4-example.png)
+
+*Figure 4 展示一条三-skill 路径：raw video → active video editing session → extracted frames with timestamps → generated GIF with output metadata。下半部分把每个抽象 skill 展开成 5 步 workflow。这个例子说明 graph path 不是把三个关键词塞进题面，而是要求前一步产物成为后一步的前置状态。*
+
+</details>
 
 ### Multi-agent synthesis harness
 
@@ -481,7 +626,24 @@ skill-graph path
 → failed: diagnostic feedback → constructor repair
 ```
 
-一轮运行从 3,721 paths 得到 3,560 usable tasks。平均 repair 2.31 cycles、11 tool calls；721 个首轮失败任务被修回。论文没有在主文明确写出允许的最大 repair cycles/tool calls 数值，因此这里不推断未披露的上限。
+两道 verification 的职责不同：
+
+- **execution verification**：在 Harbor container 中执行 oracle solution，再运行 tests，回答“任务是否真的可解、测试能否跑通”；
+- **rubric evaluation**：检查 instruction 与 tests 是否一致、题面是否 self-contained、是否泄露 oracle，回答“即使能跑，这个 reward 是否定义正确”。
+
+一轮运行从 3,721 paths 得到：
+
+| Verification outcome | 数量 | 比例 | 后续用途 |
+|---|---:|---:|---|
+| Oracle + rubric 都通过 | 3,423 | 92.0% | SFT；也可用于 RL |
+| Oracle 通过、rubric 未通过 | 137 | 3.7% | **保留给 SFT，RL 丢弃** |
+| Oracle 未通过 | 161 | 4.3% | 不作为 usable task |
+
+因此 oracle pass rate 是 95.7%，usable tasks 为 3,560。平均 repair 2.31 cycles、11 tool calls；721 个首轮失败任务被修回。rubric failure 中 **77% 来自 instruction-test misalignment**，说明“oracle 能解”并不能替代 reward specification 检查。
+
+“保留对的和错的一起训练”需要精确理解：论文保留的是 **oracle 可执行、但 rubric judge 认为 specification 有问题**的 137 个实例，用于 SFT 保留 trajectory diversity；它们不进入 RL，因为错误 tests/rubric 会提供错误 reward。论文并不是把所有执行失败的 rollout 都无条件混入训练。
+
+论文没有在主文明确写出允许的最大 repair cycles/tool calls 数值，因此这里不推断未披露的上限。
 
 ### Prompt 披露边界
 
@@ -500,6 +662,59 @@ skill-graph path
 - evaluation agent：Terminus 2；
 - orchestration：Harbor；
 - 128 个并发 Docker environments。
+
+#### 生成数据的难度分布
+
+Hy3 Preview 对每题独立尝试 3 次：
+
+| 3 次中成功次数 | Tasks | 含义 |
+|---:|---:|---|
+| 0/3 | 1,352（38%） | 对当前 teacher 较难 |
+| 1/3 | 637（18%） | learnable band |
+| 2/3 | 679（19%） | learnable band |
+| 3/3 | 892（25%） | 较容易 |
+
+1/3 与 2/3 合计 **37%**。这部分既不是全部失败、也不是已经饱和，最接近能产生有效学习信号的难度区间。
+
+<details markdown="1">
+<summary><strong>展开：SFT recipe、结果与 error analysis</strong></summary>
+
+**SFT 配置**
+
+- Qwen3-8B / 14B / 32B，full-parameter SFT；
+- AdamW，$\beta_1=0.9,\beta_2=0.95$，weight decay $10^{-4}$；
+- learning rate $2\times10^{-5}$，cosine schedule，10% warmup；
+- 5 epochs，bf16，gradient clipping 1.0；
+- micro-batch 为每 GPU 1，再用 gradient accumulation。
+
+**Terminal-Bench 结果**
+
+| Model | TB 1.0 | Avg. turns | TB 2.0 | Avg. turns |
+|---|---:|---:|---:|---:|
+| Qwen3-8B + SkillSynth | 17.1 | 1.8 | 13.5 | 2.8 |
+| Qwen3-14B + SkillSynth | 22.9 | 1.8 | 19.9 | 1.6 |
+| Qwen3-32B + SkillSynth | 33.8 | 3.1 | 29.6 | 1.6 |
+
+TB 1.0 含 80 tasks，TB 2.0 含 89 tasks；结果取 3 次独立运行的均值并报告 95% confidence interval。表里最稳妥的结论是 scaling trend：同一 SkillSynth 数据配方下，模型规模越大，两个 benchmark 都持续提高。
+
+![SkillSynth Figure 1：不同数据源的 scenario、skill 与 pair 数量](assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure1-diversity.png)
+
+*原论文 Figure 1。作者用相同抽取器比较 trajectory diversity；SkillSynth 在 scenarios、skills 与 scenario-skill pairs 上都更高。进一步的对照显示，其 unique scenario-skill coverage 比 single-skill synthesis 高 31%，比 random multi-skill synthesis 高 19%。这里衡量的是 rollout 中实际出现的结构，而不是题面里声称包含多少 skills。*
+
+**失败行为分布**
+
+| Failure mode | 占比 |
+|---|---:|
+| Partial implementation | 42.2% |
+| 过度相信 inline self-test | 29.5% |
+| Premature termination | 12.9% |
+| API / flag hallucination | 7.0% |
+| Debug fixation | 5.1% |
+| Error rationalization | 3.3% |
+
+前两类合计超过 70%：很多失败不是完全不会，而是做到一半就停，或用自己写的局部检查替代官方 verifier。这也解释了为什么 terminal-agent 数据需要完整可执行环境与独立 tests，而不能只训练“看起来合理的命令序列”。
+
+</details>
 
 ---
 
