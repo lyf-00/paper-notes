@@ -155,9 +155,60 @@ keep(task) iff pass@16 > 0
 
 它确认任务至少在当前强模型能力边界内可解，但也引入 teacher ceiling：所有 o3 解不出的任务都被丢弃，其中可能包含正确但更难的任务。
 
+### 一条公开数据怎样对应四个阶段
+
+公开的 Harbor 格式数据里可以直接查看 [`task_000000_00b7d96d`](https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d)。这道题要求 agent 在 `/home/user/api-test` 中建立 Python virtual environment，安装指定版本的 `httpx` 与 `requests`，再生成内容严格匹配的 `requirements.txt` 和 `install.log`。
+
+| Pipeline stage | 这个样本中的 artifact | 谁生成 / 表达什么 |
+|---|---|---|
+| I. task description | [`instruction.md`](https://huggingface.co/datasets/obiwan96/endless-terminals/blob/main/task_000000_00b7d96d/instruction.md) | LLM 生成给 agent 看的公开任务：目录、包版本、文件内容和终态约束。privileged truth 不作为单独的公开字段交给 agent，而是被编译进环境与 verifier。 |
+| II. container setup | [`environment/`](https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d/environment) 下的 `container.def`、`Dockerfile`、`test_initial_state.py` | `.def` 建立 Apptainer 初态；Dockerfile 是转成 Harbor 后的等价环境；initial test 检查 `/home/user`、Python/pip 等 prerequisite 已就绪，同时目标产物尚未被提前创建。 |
+| III. completion tests | [`tests/test_final_state.py`](https://huggingface.co/datasets/obiwan96/endless-terminals/blob/main/task_000000_00b7d96d/tests/test_final_state.py) 与 `tests/test.sh` | 验证 venv、可执行文件、两个文本文件的精确内容，以及包确实装在该 venv 中；`test.sh` 把 pytest 结果写成 binary reward。 |
+| IV. solution filtering | [`solution/`](https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d/solution) 下的 `o3_summary.json` | 保存 o3 的交互尝试及成功统计；只要 16 次里至少一次通过 final tests，这条任务就被保留。 |
+| Harbor packaging | `task.toml`、`solution/solve.sh`、目录布局 | 这些不是新的 synthesis stage，而是把已验证 task 包装成 Harbor 可调度、可复现执行的格式。 |
+
+作者仓库还公开了一个较轻量的 [`tasks.json`](https://github.com/kanishkg/endless-terminals/blob/main/tasks.json)，适合快速浏览 instruction、difficulty/category 与 CPU、内存、存储、timeout 等运行配置；完整环境 artifact 则看上面的 Hugging Face 目录。需要注意：Hugging Face 数据位于 `obiwan96` 账号，页面称其随论文发布且包含约 2,500 个 Harbor 环境，但论文作者的 GitHub README 没有反向链接它，因此这里将它标作**公开数据镜像**，不把账号归属说成作者官方。
+
+### Dockerfile、Apptainer、Harbor 与 PTY 不是同一层概念
+
+| 名词 | 格式 / 作用 | 在 Endless Terminals 里的位置 |
+|---|---|---|
+| Dockerfile | 按行写 image build 指令，常见语句是 `FROM`、`RUN`、`COPY`、`ENV`、`CMD`；构建结果通常是分层的 OCI/Docker image。 | 约 2,500 个任务被转换成 Docker/Harbor 格式，便于用通用 container backend 运行和评测。 |
+| Apptainer definition (`container.def`) | header 指定 `Bootstrap` / `From`，正文按 `%post`、`%files`、`%environment`、`%runscript` 等 section 组织；构建结果通常是单文件 `.sif` image。 | 论文得到 3,255 个 Apptainer task，并用这条路径完成全部训练实验。Apptainer 常见于 HPC，可在没有常驻 Docker daemon 的环境里以普通用户运行。 |
+| Harbor | terminal-agent 的 environment / task orchestration 与 evaluation harness，不是这里所说的 Docker 镜像仓库产品 Harbor。它负责按 `instruction.md + environment/ + tests/ + task.toml` 启动容器、连接 agent、运行 verifier、收集结果。 | 论文的 Docker 路径交给 Harbor；作者仓库也提供 Harbor adapter 和并行评测脚本。 |
+| PTY | pseudo-terminal，给进程提供“像真的交互式终端一样”的输入输出通道；它不是 image 格式。PTY 能保留 TTY 检测、shell prompt、信号和交互语义。 | Apptainer 路径用一个 persistent PTY shell；同一 episode 的多轮 command 共享 filesystem、环境变量和后台进程状态。 |
+
+所以“Docker 用 Harbor、Apptainer 用 PTY”不能理解成两组同类替代品。更准确的分层是：
+
+```text
+image/runtime layer:  Docker/OCI image       | Apptainer .sif
+orchestration layer:  Harbor framework       | authors' custom persistent session
+interaction channel:  environment.exec(...)  | PTY-backed interactive shell
+```
+
+格式细节可对照 [Dockerfile reference](https://docs.docker.com/reference/dockerfile)、[Apptainer definition files](https://apptainer.org/user-docs/master/definition_files.html) 与 [Harbor task structure](https://www.harborframework.com/docs/tasks)。
+
 ### Prompt 和 harness 到底长什么样
 
-论文没有在正文逐字列出生成 prompt，但代码仓公开了主要 prompt 与文件结构。其核心约束是：
+论文没有在正文逐字列出生成 prompt，也**没有披露 Stage I–III 使用的具体生成模型**：正文始终只写 “a language model” 或 “the model”。它唯一明确命名的生成阶段模型是 Stage IV 的 o3，用于 16 次 solvability-filter 尝试。
+
+这里还要区分两种 trajectory：
+
+- `o3` 产生的是数据进入训练前的**过滤 trajectory**，作用是判定任务是否至少可解一次；
+- PPO 阶段的 16 rollouts / prompt 是当前被训练 policy 的 **on-policy trajectory**，不是拿 o3 trajectory 做 RL。
+
+当前开源实现把生成模型做成可配置参数；README 的复现命令示例对 task generation 和 solution generation 都填写 `Qwen/Qwen3-32B`。这说明**代码可以用 Qwen3-32B 重跑**，不能反推论文中的 3,255 条原始环境就是由它生成的。
+
+代码仓公开了主要 prompt 与文件结构，可以直接跳到：
+
+- [Stage I task + privileged truth prompt](https://github.com/kanishkg/endless-terminals/blob/main/generator/task_template_gen.py#L21-L85)
+- [Stage II initial-state test prompt](https://github.com/kanishkg/endless-terminals/blob/main/generator/initial_state_test_gen.py#L17-L43)
+- [Stage II Apptainer definition prompt](https://github.com/kanishkg/endless-terminals/blob/main/generator/apptainer_def_gen.py#L34-L93)
+- [Stage III final-state test prompt](https://github.com/kanishkg/endless-terminals/blob/main/generator/completion_test_gen.py#L44-L72)
+- [Stage IV solution-agent prompt](https://github.com/kanishkg/endless-terminals/blob/main/generator/sample_solutions.py#L29-L60)
+- [全部 generator 源码目录](https://github.com/kanishkg/endless-terminals/tree/main/generator)
+
+其核心约束是：
 
 - public task 要像用户请求；
 - truth 要列清路径、内容和 expected state；
@@ -178,7 +229,15 @@ reasoning...
 <command>done</command>
 ```
 
-每轮把 stdout、stderr、exit code 追加回历史。训练最多 16 turns / 16K context；评测可到 64 turns。Docker 路径使用 Harbor，论文主实验使用 persistent Apptainer PTY。
+每轮把 stdout、stderr、exit code 追加回历史。训练最多 16 turns / 16K context；评测可到 64 turns。论文主实验使用 persistent Apptainer PTY；Docker/Harbor 是另一条受支持的执行与评测路径。
+
+### 公开实现与数据链接
+
+- [论文 HTML](https://arxiv.org/html/2601.16443) / [arXiv abstract](https://arxiv.org/abs/2601.16443)
+- [作者代码仓库](https://github.com/kanishkg/endless-terminals)
+- [作者仓库中的 task 索引 `tasks.json`](https://github.com/kanishkg/endless-terminals/blob/main/tasks.json)
+- [公开 Hugging Face 环境镜像（约 2,500 个 Harbor task bundles）](https://huggingface.co/datasets/obiwan96/endless-terminals)
+- [generation prompts](https://github.com/kanishkg/endless-terminals/tree/main/generator)
 
 ### 最值得带走的点
 
