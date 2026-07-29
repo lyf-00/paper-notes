@@ -720,6 +720,10 @@ TB 1.0 含 80 tasks，TB 2.0 含 89 tasks；结果取 3 次独立运行的均值
 
 ## Terminal-World：skill 同时生成 I / E / V / G
 
+![Terminal-World 的核心思路与数据效率结果](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure1-overview-results.png)
+
+*原论文 Figure 1。左侧把一个 agent skill 解码成 what / when / how，分别约束 task、environment 与 trajectory；右侧显示同一条 synthesis recipe 的数据效率与 scaling trend。这里最重要的不是“skill 是 prompt seed”，而是 skill 同时提供任务语义、环境前置条件和执行 SOP，使三类 artifact 从同一个 primitive 派生。*
+
 ### 为什么 agent skill 适合当 synthesis primitive
 
 Terminal-World 认为一个好的 skill 天然包含：
@@ -740,6 +744,10 @@ how  → execution guideline
 
 ### 四阶段 pipeline
 
+![Terminal-World 四阶段 pipeline](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure2-pipeline.png)
+
+*原论文 Figure 2。Stage A 从 10k skills 过滤并组合 synthesis primitives；Stage B 生成 $(\mathcal I,\mathcal E,\mathcal V,\mathcal G)$；Stage C 分三期生成 initial files、sandbox setup 与 pytest verifier；Stage D 把 guideline 只用于 teacher rollout，训练前再从 student 输入中移除。*
+
 #### Stage A：Skill collection
 
 从 ClawHub / SkillMP 收集 10,000 skills：
@@ -748,11 +756,64 @@ how  → execution guideline
 2. LLM filter：terminal applicability 与 content richness 都必须 3/3，剩 3,025；
 3. popularity filter：取下载量前 1,000，覆盖 12 categories / 63 subcategories。
 
-再扩展：
+![Terminal-World 附录 Figure 6：skill taxonomy](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure6-skill-taxonomy.png)
 
-- 同 subcategory 的 composition relation → 76 skill teams；
-- 跨 subcategory 的 composition graph → 237 skill graphs；
-- 全部 flatten 成统一 `skill.md`。
+*附录 Figure 6。1,000 个最终 skills 覆盖 12 个大类与 63 个 subcategories；Tools、Development、Testing & Security、Data & AI 是较大的 terminal-native 分支，同时也保留 Documentation、Business、Research、Databases 等较长尾能力。subcategory 不只是展示标签，后面决定一个 composition relation 应进入 skill team 还是 skill graph。*
+
+##### Skill team 与 skill graph 到底怎么划分
+
+先对 1,000 个 single skills 的 skill pair 运行 SkillNet，得到四种关系：
+
+| SkillNet relation | Terminal-World 怎么用 | 直觉 |
+|---|---|---|
+| `Compose with` | 同 subcategory 时进入 team 候选 | 两个能力可以在同一专业工作流中协作 |
+| `Depends on` | 跨 subcategory 时作为有向 graph edge | 下游能力以前一个能力的产物或状态为前置条件 |
+| `Similar to` | 用于 deduplication | 两个 skills 近似重复，不值得同时扩展 |
+| `Belong to` | 丢弃 | 与已有 category/subcategory taxonomy 信息重复 |
+
+因此 team 和 graph 不是按 skill 数量划分，而是按**关系类型 + taxonomy 边界**划分：
+
+**Skill team：同 subcategory 的 depth extension**
+
+```text
+same subcategory
++ Compose-with relations
+→ TeamSkill-Creator
+→ multi-role workflow
+→ flatten to one skill.md
+```
+
+- 同一个专业子领域里，多个角色围绕同一目标分工，例如数据工程中的 schema 设计、数据校验和 pipeline monitoring。
+- `Compose with` 是相对对称的协作关系，重点是把单个 skill 的 SOP 加深为多角色 workflow，而不是强调严格的先后依赖。
+- TeamSkill-Creator 由 Claude Code 驱动，把相关 skills 整合成统一的 goal、role responsibilities、handoff 与 end-to-end SOP。
+- 最终得到 **76 个 skill teams**。
+
+**Skill graph：跨 subcategory 的 breadth extension**
+
+```text
+cross-subcategory
++ directed Depends-on relations
+→ directed composition graph
+→ greedy maximal-path cover
+→ flatten each path to one skill.md
+```
+
+- `Depends on` 保留方向，例如 `data extraction → statistical analysis → report generation`，后一个 skill 消费前一个 skill 产生的状态或 artifact。
+- 先以 skills 为节点、跨 subcategory 的 dependency 为边构造有向图。
+- 对图中每个可能起点，通过 DFS 找从该点出发的 longest simple path；从所有候选中取最长路径 $p^*$。
+- 把 $p^*$ flatten 为一个 graph-skill primitive 后，从图中移除该路径上的节点，再重复查找下一条最长路径。
+- 路径长度小于 2 时停止，因为此时只剩无法组成 workflow 的 isolated nodes。
+- 这个 greedy path cover 让进入 graph 的 skill 不重复消费，并尽量形成长的 cross-domain pipeline；最终得到 **237 个 skill graphs**。
+
+论文把它们概括为：
+
+```text
+single skill：一个原子能力
+skill team：同领域多角色协作，把 workflow 做深
+skill graph：跨领域有向依赖，把 capability coverage 做宽
+```
+
+三者最终全部 flatten 成相同 `skill.md` 接口，所以下游 task generator 不需要知道输入 primitive 原来是 single、team 还是 graph。
 
 #### Stage B：Task generation
 
@@ -774,6 +835,158 @@ $$
 3. blueprint completeness；
 4. guideline quality；
 5. evaluation-criteria quality。
+
+<details markdown="1">
+<summary><strong>展开：Task Generation prompt 的完整 contract</strong></summary>
+
+**角色与目标**
+
+- 为 terminal-agent training 创建真实 Linux terminal task。
+- 输入是 Agent Skill 与 Persona；skill 决定 capability、workflow、failure modes，persona 决定领域背景、动机与请求语气。
+- 任务必须忠实保留 skill 的核心机制，同时形成自包含、真实、可验证的工作请求。
+
+**运行环境**
+
+```text
+OS: Debian 13 (trixie)
+working directory: /app
+pre-installed:
+  Python 3.12 / pip 25
+  Node.js 20 / npm 10
+  Java 8
+  gcc/g++ 14, make, git, curl, wget, tmux
+additional packages: apt-get
+subdirectories:
+  /output, /logs, /tests, /solution
+```
+
+**生成步骤**
+
+1. 先判断 persona 与 skill 是否有真实联系。
+2. 明显不相关时：
+   - `pair_relevance = "unrelated"`；
+   - 给出具体原因；
+   - `task_title = "UNRELATED_PAIR"`；
+   - 其他内容字段留空。
+3. 相关时生成 agent 实际看到的 `instruction`：必须自包含、可在 sandbox 中解决，并可通过 observable outputs 验证。
+4. `initial_files` 的每项都包含：
+   - `generation_mode`: `llm_direct | local_tool | remote_fetch`；
+   - `filepath`；
+   - `description`：完整 reproduction spec，包含格式、内部结构、规模、2–3 个具体示例值，以及 agent 必须处理的 deliberate anomalies。
+5. `setup_steps` 是自然语言、有序的环境准备步骤；没有额外 setup 时返回空数组。
+6. 每条 `evaluation_criteria` 必须能直接翻译为 pytest assertion，包括精确 path、key、threshold 与 format。
+
+**输出**
+
+```json
+{
+  "pair_relevance": "related | unrelated",
+  "pair_relevance_reason": "...",
+  "task_title": "...",
+  "instruction": "...",
+  "initial_files": [
+    {
+      "generation_mode": "llm_direct | local_tool | remote_fetch",
+      "filepath": "/app/...",
+      "description": "..."
+    }
+  ],
+  "setup_steps": ["..."],
+  "evaluation_criteria": ["..."]
+}
+```
+
+只允许输出一个 JSON object，不加 Markdown fence 或额外说明。模板变量是 `{skill}` 与 `{persona}`。
+
+</details>
+
+<details markdown="1">
+<summary><strong>展开：Guideline Generation prompt 的完整 contract</strong></summary>
+
+输入：
+
+```text
+Skill: {skill}
+Core Goal: {core_goal_json}
+```
+
+目标是生成 teacher rollout 使用的 step-by-step execution guideline。每一步必须：
+
+- **Actionable**：给出具体 command、file path 或 edit；
+- **Verifiable**：说明如何确认该步成功；
+- **Ordered**：尊重任务依赖顺序；
+- 优先从 skill SOP 提取操作；
+- 关键 caveat 以 `IMPORTANT:` 或 `WARNING:` 开头；
+- 不泄露最终文件内容或完整 solution；
+- 避免 “inspect the project” 或 “fix errors” 这类没有 target、command、checkpoint 的空泛步骤。
+
+每项使用统一结构：
+
+```text
+Step N: <action> -- <exact command or edit> -- <verification or warning>
+```
+
+严格输出：
+
+```json
+{
+  "guideline": [
+    "Step 1: ...",
+    "Step 2: ..."
+  ]
+}
+```
+
+</details>
+
+<details markdown="1">
+<summary><strong>展开：Task Quality Judge prompt 的完整评分规则</strong></summary>
+
+输入：
+
+```text
+Persona: {persona_text}
+Skill: {skill_text}
+Generated Goal: {goal_json}
+```
+
+Judge 不检查固定文风或格式，而检查 realism、task quality 与 training value。自然、简洁的 instruction 可以拿高分，不要求固定 opener、编号列表或 `Requirements:` 标题。
+
+五个维度均为 0–5：
+
+1. **Instruction Quality**
+   - 5：真实、强 skill alignment、goal 与 success condition 清晰；
+   - 3：可执行但泛化或部分缺信息；
+   - 0：冲突、不连贯或不可执行。
+2. **Solvable & Closed-World**
+   - 5：完全在 isolated container 内完成，数据与依赖都在 blueprint；
+   - 3：大体 closed-world，但有少量可合理补全的模糊点；
+   - 0：明确依赖外网、私有凭据或缺少关键输入。
+3. **Blueprint Completeness**
+   - 检查 filesystem、data schema、dependencies、entrypoints、validation 五类信息；
+   - 5 表示五类齐全，3 表示可构建但缺 1–2 类关键细节，0 表示空或自相矛盾。
+4. **Guideline Quality**
+   - 检查 workflow ordering、granularity、checkpoints、SOP coverage 与是否泄露答案；
+   - 过于抽象或过度脚本化都会降分。
+5. **Evaluation Criteria Quality**
+   - 检查是否 outcome-focused、具体、可稳定转为 black-box pytest；
+   - 只写主观目标或缺少关键 condition 会降分。
+
+输出严格为：
+
+```json
+{
+  "instruction_quality": {"score": 0, "reason": "..."},
+  "solvable_closed_world": {"score": 0, "reason": "..."},
+  "blueprint_completeness": {"score": 0, "reason": "..."},
+  "guideline_quality": {"score": 0, "reason": "..."},
+  "evaluation_criteria_quality": {"score": 0, "reason": "..."}
+}
+```
+
+pipeline 只保留五项都至少 4 分的样本。
+
+</details>
 
 #### Stage C：Environment building
 
@@ -813,6 +1026,223 @@ Pytest verifier 必须：
 - 在 pre-execution initial state 全部失败；
 - 只检查 agent 产生的结果，不重复检查已验证的 initial files。
 
+<details markdown="1">
+<summary><strong>展开：三种 Initial File Generation prompts</strong></summary>
+
+**1. `llm_direct`**
+
+输入：
+
+```text
+Task Instruction: {instruction}
+Environment Blueprint: {blueprint}
+Target File: {target_file}
+Previously Generated Files: {previous_files}
+```
+
+LLM 只生成当前 target file，并同时参考 filepath/description、task context、system requirements 与之前文件的 imports/API，保证跨文件一致。响应结尾必须包含：
+
+```json
+{
+  "filepath": "exact target path",
+  "content": "full file content"
+}
+```
+
+**2. `local_tool`**
+
+这是在 Linux sandbox 内运行的 specialized artifact agent，只允许调用：
+
+```json
+{
+  "tool": "python",
+  "target_filepath": "...",
+  "code": "...",
+  "timeout_sec": 120
+}
+```
+
+约束：
+
+- 只能使用 Python tool；
+- `target_filepath` 必须与请求路径完全一致；
+- 用程序生成或修复目标 artifact；
+- 一直工作到 tool observation 确认 artifact valid；
+- 只处理目标 artifact，不解决整个 task。
+
+输入为 `{target_filepath}`、`{file_description}`、`{instruction_summary}`。
+
+**3. `remote_fetch`**
+
+可用 tools：
+
+```text
+web_search(query, top_k?, domain_hint?)
+fetch_page(url, mode=http|dynamic|stealth, timeout_ms?)
+download_file(url, save_as, timeout_ms?)
+```
+
+约束：
+
+- agent 是 stateless，不能假设浏览器 state 或 session reuse；
+- search、fetch、download 是分离步骤；
+- `save_as` 必须严格等于 target path；
+- 一直执行到 downloaded artifact 验证成功；
+- 只抓目标 artifact，不执行整体 task。
+
+</details>
+
+<details markdown="1">
+<summary><strong>展开：File Verification prompt</strong></summary>
+
+System role 是 verification-only file verifier：
+
+- scope 仅限声明的 filepaths 与 specifications；
+- 只能用 shell commands 检查文件；
+- 禁止修改文件、访问网络或验证 runtime state；
+- evidence 不足时优先 `status="continue"`；
+- 每轮只输出一个 JSON object。
+
+继续检查：
+
+```json
+{
+  "analysis": "还需要检查什么",
+  "status": "continue",
+  "commands": ["cat /app/data.csv"]
+}
+```
+
+结束检查：
+
+```json
+{
+  "analysis": "...",
+  "status": "finalize",
+  "result": {
+    "overall_verdict": "pass | fail",
+    "file_findings": [
+      {
+        "filepath": "...",
+        "reason": "...",
+        "repair_instructions": "..."
+      }
+    ],
+    "global_findings": [
+      {
+        "reason": "...",
+        "primary_owner": "llm_direct | specialized | unattributed",
+        "repair_instructions": "..."
+      }
+    ]
+  }
+}
+```
+
+`pass` 时两个 findings arrays 必须为空；`fail` 时至少有一条 finding，且 repair instruction 必须具体可执行。`global_findings` 只用于仍然属于 file scope 的跨文件 path、schema、reference 问题。
+
+User input 包含 `{instruction}`、`{file_lines}` 与初始 `{workspace_tree}`；workspace tree 只是初始 hint，不能代替实际检查。
+
+</details>
+
+<details markdown="1">
+<summary><strong>展开：Environment Build / Verify / Repair prompts</strong></summary>
+
+三类 prompt 共享以下边界：
+
+```text
+Debian 13, x86_64
+user uid=1000, non-root; privileged commands use sudo
+working directory: /app
+base tools already installed
+instruction is context only
+environment agent must not solve the task
+```
+
+**Env Build**
+
+输入 `{instruction}`、`{blueprint}`、`{pre_seeded_files}`。只生成：
+
+1. 按顺序执行 `setup_steps` 的 shell commands；
+2. 创建必要目录；
+3. 从 pre-seeded dependency manifests 安装依赖；
+4. 启动或配置 services、environment variables 与 permissions。
+
+Negative constraints：
+
+- 绝不创建、下载或覆盖 pre-seeded asset path；
+- 不写 application source code；
+- 不执行 task entrypoint；
+- `sudo` 运行 network command 时使用 `sudo -E` 保留 proxy env；
+- 结果以一个 Bash code block 结束。
+
+**Env Verify**
+
+输入还包括已经执行的 `{setup_script}`。只生成 probing commands：
+
+- import required Python/Node libraries；
+- 检查 CLI tools 是否存在；
+- 检查 required directories；
+- 有明确 version 要求时验证版本。
+
+禁止安装依赖、写代码或执行 task。verify script 不使用 `set -e`，因此所有 probes 都应运行，以收集完整错误。
+
+**Env Repair**
+
+输入增加 `{commands}` 与 `{errors}`。repair 在一个 **fresh sandbox** 中执行，因此：
+
+- 不能依赖上次失败尝试留下的 side effects；
+- 必须返回完整 corrected command list，而不是 patch/delta；
+- commands 会合并为使用 `set -euxo pipefail` 的一次性 Bash script；
+- 同样不得覆盖 pre-seeded assets、写 application code 或执行 task。
+
+</details>
+
+<details markdown="1">
+<summary><strong>展开：Pytest Verifier Generation prompt</strong></summary>
+
+Verifier 在 agent 完成任务后、同一个 sandbox state 中运行。它只判断 task 是否完成，不能读取 agent messages 或 tool traces。
+
+输入：
+
+```text
+Instruction: {instruction}
+Evaluation Criteria: {evaluation_criteria}
+Target Output File: {target_output_file}
+Initial Text Files: {initial_text_files}
+Initial Asset Metadata: {initial_asset_files}
+Validated Environment File Paths: {validated_filepaths}
+```
+
+严格输出：
+
+```json
+{
+  "system_packages": ["..."],
+  "python_packages": ["..."],
+  "helper_files": [
+    {"path": "tests/filename.ext", "content": "..."}
+  ],
+  "test_outputs_py": "valid pytest source"
+}
+```
+
+完整约束：
+
+1. 使用 pytest；
+2. `test_outputs_py` 必须是合法 Python；
+3. tests 必须 black-box；
+4. 优先验证文件、command behavior、localhost HTTP behavior 或 deterministic end-to-end examples；
+5. deterministic 且 self-contained；
+6. 除非任务明确需要 localhost，否则不访问网络；
+7. 只添加 verifier 自己需要的 packages；
+8. extra test assets 放入 `helper_files`；
+9. JSON 外不输出解释；
+10. initial files 已存在且已验证，不测试其存在性或内容；
+11. 只检查 evaluation criteria 与 agent 创建的结果，避免 vacuous pass。
+
+</details>
+
 #### Stage D：Trajectory collection
 
 DeepSeek-V3.2 + Terminus2 接收：
@@ -823,64 +1253,48 @@ instruction I + execution guideline G + history H
 
 rollout 后运行 pytest。论文保留成功与失败 trajectories；SFT 前从模型输入中移除 guideline，让 student 学 terminal interaction，而不是依赖隐式提示。
 
-### Prompt contract
+<details markdown="1">
+<summary><strong>展开：Terminus2 teacher system prompt</strong></summary>
 
-Terminal-World 附录把 prompt 拆得非常细，可以归纳为三张“prompt contract”：
+Teacher 每轮严格返回：
 
-**Task generation prompt**
-
-```text
-Inputs:
-  Agent Skill
-  Persona
-
-Output JSON:
-  pair_relevance
-  task_title
-  instruction
-  initial_files[{generation_mode, filepath, description}]
-  setup_steps[]
-  evaluation_criteria[]
+```json
+{
+  "analysis": "基于 terminal output 判断已完成与未完成部分",
+  "plan": "下一步计划、命令及预期作用",
+  "commands": [
+    {"keystrokes": "ls -la\n", "duration": 0.1},
+    {"keystrokes": "cd project\n", "duration": 0.1}
+  ],
+  "task_complete": false
+}
 ```
 
-Relevance check 很重要：persona 与 skill 不相关时输出 `UNRELATED_PAIR`，而不是强行编故事。
+规则：
 
-**Environment setup prompt**
+- `analysis`、`plan`、`commands` 必填，`task_complete` 可选且默认 false；
+- `keystrokes` 原样发送给 terminal，command 必须以 `\n` 结尾；
+- 特殊按键使用 tmux-style sequence，例如 `C-c`、`C-d`；
+- `duration` 控制发送后等待时间：即时 command 通常 0.1 秒，编译/搜索约 1 秒，慢任务按需增加；
+- 更推荐用空 keystrokes 做短轮询，而不是一次阻塞很久；
+- 空 `commands` array 合法，可用于只观察当前状态；
+- 输入为 `{instruction}` 与 `{terminal_state}`。
 
-```text
-Inputs:
-  base environment specification
-  instruction (context only)
-  blueprint
-  pre-seeded files
+注意 guideline $\mathcal G$ 是 collection-time privileged guidance：teacher rollout 时可见，但 SFT 前从 student input 删除。
 
-Output:
-  bash commands for dependency/runtime setup only
+</details>
 
-Negative constraints:
-  do not create application code
-  do not solve the task
-  do not overwrite pre-seeded assets
-```
-
-**Pytest verifier prompt**
+这套 prompts 的核心不是角色措辞，而是 **scope isolation**：
 
 ```text
-Inputs:
-  instruction
-  evaluation criteria
-  initial text files
-  initial asset metadata
-  validated paths
-
-Output JSON:
-  system_packages[]
-  python_packages[]
-  helper_files[]
-  test_outputs_py
+task agent       只定义 I / E / V
+guideline agent  只生成 collection-time G
+file agents      只创建指定 initial artifacts
+file verifier    只检查静态文件
+env agents       只准备或验证 runtime
+pytest agent     只编译终态验收逻辑
+teacher agent    才真正执行任务
 ```
-
-其中最关键的 prompt engineering 不是角色描述，而是**scope isolation**：file agent 只造文件、env agent 只装环境、verifier 只验终态、teacher 才解题。
 
 ### 数据与成本
 
@@ -893,6 +1307,85 @@ Output JSON:
 - 平均 trajectory 13.44 steps / 18,176 tokens；
 - 6,884 accepted task specs → 5,723 executable envs，construction success 83.1%；
 - pipeline 总成本约 \$999.59，约 \$0.17 / trajectory。
+
+![Terminal-World Figure 3：environment 与 trajectory 统计](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure3-data-stats.png)
+
+*原论文 Figure 3。四个 panel 分别展示 environment domain 词云、主要 file types、trajectory step 分布和 Bash command 分布。`.py`、`.txt`、`.csv` 最常见，但总计覆盖 104 种 file types；trajectory 主要集中在 6–30 steps，并覆盖 1,939 种 Bash commands。*
+
+### 结果
+
+论文在 Terminal-Bench 2.0、AIME24、AIME25、DABench、TableBench、BIRD 六个 benchmark 上报告 Pass@1 / Pass@3。最值得展示的是同 base-model scale 的 Terminal-Bench 2.0：
+
+| Model | Training samples | TB 2.0 P@1 | TB 2.0 P@3 | 六项平均 P@1 | 六项平均 P@3 |
+|---|---:|---:|---:|---:|---:|
+| Nemotron-Terminal-8B | 490.5k | 13.5 | 21.3 | 58.5 | 69.3 |
+| Terminal-World-8B | 5.7k | 15.7 | 23.6 | 63.5 | 71.7 |
+| Nemotron-Terminal-14B | 490.5k | 20.2 | 24.7 | 66.9 | 73.2 |
+| Terminal-World-14B | 5.7k | 21.3 | 27.0 | 66.0 | 74.1 |
+| Nemotron-Terminal-32B | 490.5k | 27.0 | 37.1 | 68.9 | 76.0 |
+| Terminal-World-32B | 5.7k | **31.5** | **43.8** | **69.3** | **77.9** |
+
+Terminal-World 只使用 5.7k trajectories，约为 Nemotron-Terminal 训练量的 1.2%。32B 上 TB 2.0 提高 +4.5 P@1 / +6.7 P@3；但这不应简单解释成“所有 benchmark 都大幅领先”，14B 的六项平均 P@1 仍略低于 Nemotron，优势主要体现在数据效率、TB 2.0 以及更大的 32B scale。
+
+### Ablation 与分析
+
+#### SFT data strategy ablation
+
+| Strategy | # Samples | 8B P@1 / P@3 | 14B P@1 / P@3 |
+|---|---:|---:|---:|
+| Full strategy | 5.7k | 15.7 / 23.6 | 21.3 / 27.0 |
+| 只用 1k single-skill | 1.0k | 9.0 / 12.4 | 13.5 / 16.9 |
+| 只用 1k team-skill | 1.0k | 10.1 / 13.5 | 14.6 / 19.1 |
+| 只用 1k graph-skill | 1.0k | 10.1 / 14.6 | 15.7 / 20.2 |
+| 缩小到 2.3k data | 2.3k | 12.4 / 18.0 | 18.0 / 22.5 |
+| 训练时保留 guideline | 5.7k | 13.5 / 20.2 | 19.1 / 24.7 |
+| 移除 failure trajectories | 2.3k | 10.1 / 14.6 | 15.7 / 20.2 |
+| 对 failure trajectory 用 negative SFT loss | 5.7k | 9.0 / 13.5 | 14.6 / 19.1 |
+
+三个结论：
+
+1. graph-skill 单独训练通常略好于 single/team，但三类混合的 full strategy 最好，说明 breadth composition 有价值但不能替代数据规模与 primitive diversity。
+2. teacher collection 需要 guideline，但 student training 不能把 guideline 留在 input；否则模型倾向跟随 SOP，而不是学自主 planning。
+3. failure trajectory 不是“全错序列”。移除它已经明显掉点，对整条失败轨迹施加 negative loss 更差，因为会把其中大量正确的中间命令与 recovery 行为一起压低。
+
+附录随机抽取 300 条 verifier-failed trajectories，由四个 judge 复核，majority vote 认为 **67.7% 实际完成了任务**，进一步说明 binary verifier failure 与 trajectory-level semantic incorrectness 不是同一概念。
+
+![Terminal-World Figure 4：行为效率对比](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure4-behavior.png)
+
+*原论文 Figure 4，只在 Terminal-World-32B 与 Nemotron-Terminal-32B 都解对的任务交集上比较。Terminal-World-32B 平均 10.2 steps、40.3 commands，command error rate 21.9%，均比 Nemotron-Terminal-32B 更低；student 推理时没有 guideline，却也比 teacher DeepSeek-V3.2 的执行更简洁。*
+
+![Terminal-World Figure 5：persona 对 task scenario diversity 的影响](assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure5-persona-diversity.png)
+
+*原论文 Figure 5。固定生成 250 tasks：不使用 persona 时得到 74 个 scenario clusters；50 skills × 5 personas 得到 145 个，提升 1.96×；25 skills × 10 personas 得到 153 个，提升 2.07×。persona 的作用不是增加底层 capability，而是让同一 skill 在更多真实 usage context 中实例化。*
+
+<details markdown="1">
+<summary><strong>展开：Environment Quality Evaluation prompt</strong></summary>
+
+Judge 读取一个 Harbor task directory 中的 `instruction.md`、environment files 与 pytest tests；忽略 directory path 和 dataset identity，把每个 task 当匿名样本。四项各打 1–3 分：
+
+1. `terminal_nativeness`：是否真的需要 compiler、package manager、system/build/network CLI，而不是只写文件或 echo。
+2. `env_task_consistency`：pre-placed files 与 setup 是否精确支持 instruction，是否存在 excess、gap 或 contradiction。
+3. `env_quality`：Dockerfile、setup 与 initial files 是否 well-formed、真实、完整、可执行，而非 fabricated stubs。
+4. `verifier_robustness`：pytest 是否覆盖关键 acceptance criteria、能区分 complete/incomplete、false-positive risk 是否低；只检查 file existence 会得低分。
+
+不适用的维度按 1 分处理。严格输出：
+
+```json
+{
+  "terminal_nativeness": 1,
+  "terminal_nativeness_reason": "...",
+  "env_task_consistency": 1,
+  "env_task_consistency_reason": "...",
+  "env_quality": 1,
+  "env_quality_reason": "...",
+  "verifier_robustness": 1,
+  "verifier_robustness_reason": "..."
+}
+```
+
+三组 judge 的平均结果中，Terminal-World 的 terminal nativeness 为 2.69、env-task consistency 2.97、env quality 2.88、verifier robustness 2.92；后两项与 Endless-Terminal 相当或接近，最明显优势是 terminal nativeness 与 task-environment alignment。
+
+</details>
 
 ---
 
