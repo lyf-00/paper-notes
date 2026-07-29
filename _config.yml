@@ -13,6 +13,7 @@ exclude:
   - .skills
   - .bundle
   - .obsidian
+  - _archive
   - AGENTS.md
   - docs
   - Gemfile

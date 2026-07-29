@@ -1,5 +1,7 @@
 # Paper Reading Visual Audit
 
+> Archived snapshot. The listed notes no longer match the current repository contents.
+
 - Generated: 2026-07-26T21:59:12+08:00
 - Hard rule: at least 3 original figures/screenshots + 1 generated/self-made diagram.
 - Polish checks: first figure before 2600 chars or 32% of the note, <= 2200 body chars per figure, >= 70% figures followed by explanation.

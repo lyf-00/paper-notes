@@ -1,6 +1,8 @@
 ---
 title: "终端Agent环境合成：五篇论文的方法对比与设计哲学"
-public: true
+public: false
+archived: true
+superseded_by: /paper-reading/Terminal-Agent-Environment-Synthesis.html
 description: "深度拆解Endless Terminals、TMax、Terminal-World、SkillSynth、CLI-Universe的环境合成pipeline、prompt策略与harness设计"
 type: paper-sharing
 date: 2026-07-28
