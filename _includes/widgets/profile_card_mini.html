@@ -2,7 +2,7 @@
     <div class="col">
         <div class="card border-0 shadow-sm bg-white">
             <div class="card-body px-4 pt-4 pb-3">
-                {% if site.data.profile.portrait_url != blank %}
+                {% if site.data.profile.portrait_url and site.data.profile.portrait_url != empty %}
                 <div class="row">
                     <div class="col">
                         <!-- When the screen is wider than md, float the portrait on the right -->
