@@ -36,9 +36,10 @@
 }
 
 .blog-toc-sidebar {
+    align-self: stretch;
     display: none;
     flex: 0 0 auto;
-    overflow: hidden;
+    overflow: visible;
     transition: width 0.22s ease;
     width: clamp(180px, 18vw, 340px);
 }
@@ -125,6 +126,7 @@
     }
 
     .blog-layout-wrapper.toc-collapsed .blog-toc-sidebar {
+        overflow: hidden;
         width: 2.8rem;
     }
 
