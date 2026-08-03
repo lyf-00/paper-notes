@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">从加法式 Linear Attention 到 KDA 的状态更新演化</title>
+  <desc id="desc">展示 additive linear attention、delta rule、gated delta 与 KDA 如何逐步增加纠错、遗忘和按通道衰减。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f8fc}.card{fill:#fff;stroke:#cbd3e7;stroke-width:2}.title{font:700 32px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#17213a}.head{font:700 21px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#17213a}.body{font:17px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#34415f}.math{font:18px "Cambria Math","Times New Roman",serif;fill:#25314d}.arrow{stroke:#66738f;stroke-width:3;fill:none;marker-end:url(#a)}.tag{font:15px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#fff}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#66738f"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="520"/>
+  <text class="title" x="600" y="55" text-anchor="middle">Linear Attention 的关键演化：怎样管理有限矩阵记忆</text>
+  <g transform="translate(35 105)">
+    <rect class="card" width="245" height="310" rx="18"/>
+    <rect x="20" y="18" width="88" height="28" rx="14" fill="#637aaa"/><text class="tag" x="64" y="38" text-anchor="middle">Additive</text>
+    <text class="head" x="122" y="82" text-anchor="middle">Kernel Linear</text>
+    <text class="math" x="122" y="125" text-anchor="middle">Sₜ = Sₜ₋₁ + kₜvₜᵀ</text>
+    <text class="body" x="122" y="172" text-anchor="middle">只会追加</text>
+    <text class="body" x="122" y="204" text-anchor="middle">同一 key 冲突时</text>
+    <text class="body" x="122" y="236" text-anchor="middle">旧映射难以被精确改写</text>
+    <text class="body" x="122" y="280" text-anchor="middle">固定矩阵状态</text>
+  </g>
+  <path class="arrow" d="M285 260 L325 260"/>
+  <g transform="translate(330 105)">
+    <rect class="card" width="245" height="310" rx="18"/>
+    <rect x="20" y="18" width="92" height="28" rx="14" fill="#4c9365"/><text class="tag" x="66" y="38" text-anchor="middle">Correction</text>
+    <text class="head" x="122" y="82" text-anchor="middle">Delta Rule</text>
+    <text class="math" x="122" y="122" text-anchor="middle">êₜ = vₜ - Sₜ₋₁ᵀkₜ</text>
+    <text class="math" x="122" y="154" text-anchor="middle">Sₜ = Sₜ₋₁ + βkₜêₜᵀ</text>
+    <text class="body" x="122" y="203" text-anchor="middle">先读出旧答案</text>
+    <text class="body" x="122" y="235" text-anchor="middle">只写入预测误差</text>
+    <text class="body" x="122" y="280" text-anchor="middle">可以主动纠正映射</text>
+  </g>
+  <path class="arrow" d="M580 260 L620 260"/>
+  <g transform="translate(625 105)">
+    <rect class="card" width="245" height="310" rx="18"/>
+    <rect x="20" y="18" width="86" height="28" rx="14" fill="#b67945"/><text class="tag" x="63" y="38" text-anchor="middle">Forgetting</text>
+    <text class="head" x="122" y="82" text-anchor="middle">Gated Delta</text>
+    <text class="math" x="122" y="125" text-anchor="middle">Sₜ ← αₜSₜ₋₁</text>
+    <text class="math" x="122" y="158" text-anchor="middle">再做 delta correction</text>
+    <text class="body" x="122" y="207" text-anchor="middle">让旧记忆随时间衰减</text>
+    <text class="body" x="122" y="239" text-anchor="middle">避免状态无限累积</text>
+    <text class="body" x="122" y="280" text-anchor="middle">通常每个 head 一个门</text>
+  </g>
+  <path class="arrow" d="M875 260 L915 260"/>
+  <g transform="translate(920 105)">
+    <rect class="card" width="245" height="310" rx="18"/>
+    <rect x="20" y="18" width="82" height="28" rx="14" fill="#7d5aa8"/><text class="tag" x="61" y="38" text-anchor="middle">KDA</text>
+    <text class="head" x="122" y="82" text-anchor="middle">Channel-wise Decay</text>
+    <text class="math" x="122" y="125" text-anchor="middle">Sₜ ← Diag(αₜ)Sₜ₋₁</text>
+    <text class="math" x="122" y="158" text-anchor="middle">再擦除、纠错、写入</text>
+    <text class="body" x="122" y="207" text-anchor="middle">不同 key channel</text>
+    <text class="body" x="122" y="239" text-anchor="middle">拥有不同遗忘速度</text>
+    <text class="body" x="122" y="280" text-anchor="middle">更细粒度管理有限状态</text>
+  </g>
+  <text class="body" x="600" y="475" text-anchor="middle">共同点：读取都是 oₜ = Sₜᵀqₜ；差别主要在“怎样写、怎样擦、怎样忘”。</text>
+</svg>

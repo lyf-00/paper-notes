@@ -80,6 +80,8 @@ Gated MLA → Stable LatentMoE
 
 ## 3. 序列维：KDA + Gated MLA
 
+**KDA 是 Linear Attention。** 更准确地说，它属于现代的 recurrent matrix-memory Linear Attention：历史 token 不以完整 KV 列表参与每次读取，而是被持续写入固定大小的矩阵状态 $S_t$；因此在 head/state dimension 固定时，序列处理成本随长度 $T$ 线性增长。若对 kernel trick、状态递推和 Delta Rule 还不熟，可以先读：[Linear Attention 入门：从核技巧到 Delta Rule 与 KDA]({{ '/wiki/Linear-Attention-Primer.html' | relative_url }})，再回来看下面的 KDA 公式。
+
 ### 3.1 KDA 先看成一块可写、可擦、会遗忘的矩阵记忆
 
 对单个 attention head，令：
