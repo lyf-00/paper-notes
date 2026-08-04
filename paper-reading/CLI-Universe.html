@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Template: https://github.com/luost26/academic-homepage -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="description" content="CLI-Universe 不追求把任务生成得更多，而是用能力分类、证据研究、容器环境和 fail-to-pass 过滤，把候选任务压缩成高信息密度训练轨迹。">
+    <meta property="og:title" content="CLI-Universe：为终端 Agent 合成可验证训练任务 - Paper Notes">
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="CLI-Universe 不追求把任务生成得更多，而是用能力分类、证据研究、容器环境和 fail-to-pass 过滤，把候选任务压缩成高信息密度训练轨迹。">
+    <meta property="og:url" content="https://lyf-00.github.io/paper-notes/paper-reading/CLI-Universe.html">
+    <title>CLI-Universe：为终端 Agent 合成可验证训练任务 - Paper Notes</title>
+    <link rel="icon" href="/paper-notes/assets/site-icon.svg" type="image/svg+xml">
+
+    <!-- Stylesheets -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/paper-notes/pagefind/pagefind-component-ui.css">
+    
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/paper-notes/assets/css/blog.css">
+    
+    <link rel="stylesheet" href="/paper-notes/assets/css/global.css">
+</head>
+<body >
+    <a class="sr-only sr-only-focusable skip-link" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-sm navbar-light fixed-top mb-5 shadow-sm">
+    <div class="container-lg">
+        <a class="navbar-brand" href="/paper-notes/"><strong>Paper Notes</strong></a>
+        <button class="nav-search-button nav-search-button-compact d-sm-none ml-auto mr-2" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+            <i class="fas fa-search" aria-hidden="true"></i>
+        </button>
+        <button class="navbar-toggler" style="font-size: 1em; padding: 0.5em;" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-map" aria-hidden="true"></i> Menu
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/">Home</a>
+                </li>
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/wiki/">Wiki</a>
+                </li>
+                
+                <li class="nav-item active">
+                    <a class="nav-link" href="/paper-notes/paper-reading/">Paper Reading</a>
+                </li>
+                
+                <li class="nav-item nav-search-item">
+                    <button class="nav-link nav-search-button" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                        <kbd class="d-none d-md-inline">⌘K</kbd>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    <main id="main-content" class="container-lg">
+        
+
+
+
+
+<div class="reading-progress" aria-hidden="true">
+    <span></span>
+</div>
+
+<div class="blog-layout-wrapper">
+    <div class="blog-main">
+        <div class="mb-3">
+            <a class="small" href="/paper-notes/paper-reading/">
+                <i class="fas fa-arrow-left"></i> Paper Reading
+            </a>
+        </div>
+
+        <details class="mobile-toc d-lg-none">
+            <summary>目录</summary>
+            <div id="blog-toc-list-mobile" class="mobile-toc-list"></div>
+        </details>
+
+        <article class="bg-white rounded-xl p-4 p-md-5 mb-4 wiki-note-card" data-pagefind-body>
+            <div class="blog-content wiki-note">
+                <h1 id="cli-universe为终端-agent-合成可验证训练任务">CLI-Universe：为终端 Agent 合成可验证训练任务</h1>
+
+<h2 id="一句话判断">一句话判断</h2>
+
+<p>CLI-Universe 的价值不在于又造了一个终端任务数据集，而在于把<strong>训练数据生产线本身变成了一套可执行的质量系统</strong>：先规定想训练什么能力，再寻找现实证据、构建隔离环境、独立生成测试与解答，最后只保留能完成明确 fail-to-pass 状态变化的任务。</p>
+
+<p>论文最强的结果是：用 6,000 条成功轨迹微调 Qwen3-32B，在 Terminal-Bench 2.0 上达到 <strong>33.4%</strong>；相同规模下高于 TerminalTraj 的 18.0% 和 Nemotron 的 28.9%。但这不能直接证明 6K 数据普遍优于大规模数据，因为环境、教师模型、训练设置和评测脚手架仍然共同影响结果。</p>
+
+<h2 id="1-它试图解决什么问题">1. 它试图解决什么问题？</h2>
+
+<p>终端 Agent 的训练数据很难同时满足四个条件：</p>
+
+<ol>
+  <li><strong>任务真实</strong>：不是给现有文件随便编一句指令。</li>
+  <li><strong>执行路径足够深</strong>：需要探索、调试、状态维护与验证，而非调用一次库函数。</li>
+  <li><strong>环境可复现</strong>：依赖、服务、文件和初始状态能够重新构建。</li>
+  <li><strong>成功可判定</strong>：测试必须检查真实结果，而且初态失败、正确解答后通过。</li>
+</ol>
+
+<p>以仓库、Issue 或已有轨迹为起点的合成方法很容易扩大“来源数量”，却不一定扩大“能力覆盖”。CLI-Universe 反过来从能力空间出发：先决定 Domain、Skill Type、Capability 与 Engineering Pillar 的组合，再寻找能够支撑该组合的真实技术材料。</p>
+
+<p><img src="../assets/paper-reading/cli-universe/source-pipeline.png" alt="CLI-Universe 的三阶段任务合成流程" /></p>
+
+<p><em>论文 Figure 1。上半部分把抽象能力组合逐步写成 Blueprint；下半部分才开始物化资产、构建容器并执行验证。关键区别是：Instruction、Hint、环境清单和测试目标在进入执行阶段前已经被结构化。</em></p>
+
+<h2 id="2-三阶段流水线">2. 三阶段流水线</h2>
+
+<h3 id="21-task-blueprint-construction">2.1 Task Blueprint Construction</h3>
+
+<p>候选任务由四个维度锚定：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>回答的问题</th>
+      <th>例子</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Domain</td>
+      <td>任务发生在哪里？</td>
+      <td>软件工程、安全、数据处理、视频处理</td>
+    </tr>
+    <tr>
+      <td>Skill Type</td>
+      <td>哪类知识真正承担难度？</td>
+      <td>系统、配置、算法、密码学</td>
+    </tr>
+    <tr>
+      <td>Capability</td>
+      <td>需要什么行为能力？</td>
+      <td>探索、错误恢复、长程规划、规格遵循</td>
+    </tr>
+    <tr>
+      <td>Engineering Pillar</td>
+      <td>Agent 在做哪类工程活动？</td>
+      <td>新功能、调试、系统编程、部署</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>研究 Agent 随后检索仓库、官方文档、Issue、教程和使用案例，把抽象组合落实为具体工具、约束、输入输出协议和已知失败模式。没有足够证据支撑的候选会被丢弃。</p>
+
+<p>这一步带来的不是“让任务看起来更专业”，而是让任务变难：加入真实材料后，求解器平均轮数从 <strong>5.34</strong> 增至 <strong>18.43</strong>，通过率从 <strong>68.2%</strong> 降至 <strong>54.9%</strong>。它说明精炼确实增加了执行深度，但也需要警惕另一种解释：材料和环境可能引入额外摩擦，而不全是有效能力难度。</p>
+
+<h3 id="22-environment-realization">2.2 Environment Realization</h3>
+
+<p>通过 Blueprint 审核后，系统把任务变成自包含 Docker 环境：</p>
+
+<ul>
+  <li>拉取并改造外部资源；</li>
+  <li>必要时合成带已知真值的素材；</li>
+  <li>固定依赖、服务、权限与文件路径；</li>
+  <li>运行安装、启动、文件布局和端到端连通性的 smoke test。</li>
+</ul>
+
+<p>这一步很重要，因为终端任务的“答案”常常不是文本，而是修改后的文件系统、数据库、服务或构建产物。没有环境，测试只能检查 Agent 的自我报告；环境不稳定，评分又会混入基础设施噪声。</p>
+
+<h3 id="23-executable-verification">2.3 Executable Verification</h3>
+
+<p>测试 Agent 与解答 Agent 角色隔离：测试 Agent 不看参考解答，解答 Agent 也不看隐藏测试。测试需通过关于正确性、确定性与边界覆盖的 rubric；参考解答则在内部 Hint 指导下完成任务。</p>
+
+<p>最终还有两层过滤：</p>
+
+<ul>
+  <li><strong>Hint-conditional filtering</strong>：没有 Hint 也能轻松完成的实例被视为训练价值不足。</li>
+  <li><strong>Fail-to-pass filtering</strong>：初始环境必须失败，执行参考解答后必须通过全部测试。</li>
+</ul>
+
+<p><img src="../assets/paper-reading/cli-universe/source-filtering-evidence.png" alt="各阶段验证与任务留存率" /></p>
+
+<p><em>论文 Figure 2。候选任务经过创意、Blueprint、环境和 fail-to-pass 过滤后只留下 33.6%。这张图最重要的信息不是淘汰率本身，而是每层都绑定一个可观察质量信号：难度变化、人工/模型审核一致性、测试与基准真值的一致性，以及最终状态变化。</em></p>
+
+<p><img src="../assets/paper-reading/cli-universe/quality-funnel.svg" alt="CLI-Universe 质量漏斗示意图" /></p>
+
+<p><em>自制图解。CLI-Universe 把任务合成拆成连续质量门；6K 是漏斗末端的成功轨迹，而不是模型随意生成的 6K 条对话。</em></p>
+
+<h2 id="3-实验结果该怎样读">3. 实验结果该怎样读？</h2>
+
+<h3 id="31-主结果">3.1 主结果</h3>
+
+<p>Qwen3 系列在 Terminal-Bench 2.0 上随模型规模增长：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>模型</th>
+      <th style="text-align: right">基座</th>
+      <th style="text-align: right">CLI-Universe 微调后</th>
+      <th style="text-align: right">绝对提升</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Qwen3-8B</td>
+      <td style="text-align: right">2.5</td>
+      <td style="text-align: right">10.9</td>
+      <td style="text-align: right">+8.4</td>
+    </tr>
+    <tr>
+      <td>Qwen3-14B</td>
+      <td style="text-align: right">4.0</td>
+      <td style="text-align: right">23.0</td>
+      <td style="text-align: right">+19.0</td>
+    </tr>
+    <tr>
+      <td>Qwen3-32B</td>
+      <td style="text-align: right">3.4</td>
+      <td style="text-align: right">33.4</td>
+      <td style="text-align: right">+30.0</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>32B 模型的 33.4% 高于论文列出的同规模开放数据训练模型，包括 SkillSynth-32B（29.6%）、Nemotron-Terminal-32B（27.4%）、TerminalTraj-32B（22.0%）和 LiberCoder-32B（19.5%）。它仍低于 GLM-4.7 的 41.0%，更低于闭源前沿模型约 54%–58% 的区间。</p>
+
+<p><img src="../assets/paper-reading/cli-universe/source-ablation-scaling.png" alt="组件消融、模型扩展与数据效率" /></p>
+
+<p><em>论文 Figure 3。移除资产策略、Query rubric 或测试 rubric 都会降分，说明收益不是某一个过滤器独自贡献。相同 6K 轨迹规模下，CLI-Universe 的提升更高，是论文“数据密度高于数据数量”的主要证据。</em></p>
+
+<h3 id="32-轨迹选择比全收更有效">3.2 轨迹选择比“全收”更有效</h3>
+
+<p>论文比较了轨迹选择策略：只保留通过全部测试的 6K 成功轨迹得到 33.4%，而保留 10K 条未过滤轨迹得到 28.2%。在这个实验设置下，失败和未完成轨迹给监督微调引入的噪声大于它们提供的反例价值。</p>
+
+<p>这个结论不能外推成“失败轨迹没有价值”。如果训练目标包含错误恢复、过程奖励或偏好优化，失败轨迹仍可能有用。论文证明的是：在其多轮 SFT 配置中，<strong>可执行正确性过滤是有效的数据选择规则</strong>。</p>
+
+<h3 id="33-泛化">3.3 泛化</h3>
+
+<p>32B 模型在 BFCL-v4 上从 47.4% 提升到 58.0%，在 VitaBench 上从 15.4% 提升到 27.0%。这说明训练收益并非完全局限于 Terminal-Bench 题型，但两个外部分数仍不足以排除工具调用格式、脚手架或任务分布重合造成的影响。</p>
+
+<h2 id="4-失败分析揭示了什么">4. 失败分析揭示了什么？</h2>
+
+<p>作者把失败分为三组九类：</p>
+
+<ul>
+  <li><strong>Execution</strong>：不遵守规格、重复步骤、不知道何时终止；</li>
+  <li><strong>Coherence</strong>：上下文丢失、任务跑偏、推理与动作不一致；</li>
+  <li><strong>Verification</strong>：过早结束、不验证/错误验证、验证太弱。</li>
+</ul>
+
+<p><img src="../assets/paper-reading/cli-universe/source-failure-attribution.png" alt="不同模型的终端任务失败类型" /></p>
+
+<p><em>论文 Figure 5。前沿模型的失败主要集中在验证端，但方式不同：Claude Opus 4.6 更常“验证了但验证太浅”，GPT-5.3-Codex 更常“没有验证或验证对象不对”。CLI-Universe-32B 的验证失败占比下降，但步骤重复等执行失败上升，说明数据改善了验证行为，却没有解决长程执行稳定性。</em></p>
+
+<p>这个结果提供了一个很实用的训练诊断：当验证能力被补强后，瓶颈会转移到执行循环。下一轮数据合成不应继续简单增加更多测试，而应针对“重复命令、系统性超时、已知事实丢失、推理动作不一致”等失败构造课程。</p>
+
+<h2 id="5-我认为最值得复用的设计">5. 我认为最值得复用的设计</h2>
+
+<h3 id="51-先定义能力格子再找任务">5.1 先定义能力格子，再找任务</h3>
+
+<p>这比从热门仓库随机抽样更适合控制覆盖率。团队可以直接检查自己的训练集是否只覆盖“软件调试”，却缺少配置、数据查询、安全或长期状态维护。</p>
+
+<h3 id="52-测试和解答分离">5.2 测试和解答分离</h3>
+
+<p>同一 Agent 同时写题、写答案和写测试，很容易把误解复制到三处。角色隔离不能消除共同模型偏差，但至少降低了直接答案泄漏和为现有实现量身定制测试的风险。</p>
+
+<h3 id="53-用状态变化定义可验证性">5.3 用状态变化定义可验证性</h3>
+
+<p><code class="language-plaintext highlighter-rouge">fail before → pass after</code> 比“参考答案能运行”强得多。前者证明测试可以区分未完成与已完成状态，后者可能只是一个始终返回成功的空测试。</p>
+
+<h3 id="54-把淘汰率当作质量信号">5.4 把淘汰率当作质量信号</h3>
+
+<p>约三分之二候选被丢弃并不是管线低效的证据。只要每层过滤都有明确理由、失败记录和成本统计，高淘汰率恰恰说明生成器与验证器没有共谋放水。</p>
+
+<h2 id="6-局限与待验证问题">6. 局限与待验证问题</h2>
+
+<ol>
+  <li><strong>教师与验证器仍是 LLM</strong>：角色隔离不能消除共享盲点，特别是测试语义是否真的覆盖用户目标。</li>
+  <li><strong>只展示 6K 规模</strong>：论文没有证明继续扩大任务池时，真实技术材料、容器资源和测试审核成本能线性扩展。</li>
+  <li><strong>环境成本没有完整展开</strong>：Docker 化、依赖拉取、服务启动和多 Agent 验证可能显著提高每个可用样本的成本。</li>
+  <li><strong>基准闭环风险</strong>：能力分类来自对终端任务模式的总结，最终又主要在 Terminal-Bench 上验证，仍需更多异分布真实任务。</li>
+  <li><strong>成功轨迹偏好</strong>：SFT 只保留成功轨迹效果最好，但可能削弱模型识别失败、回滚与请求帮助的能力。</li>
+  <li><strong>与前沿模型仍有差距</strong>：33.4% 是开放数据、小于等于 32B 模型中的强结果，不代表已经接近可靠终端 Agent。</li>
+</ol>
+
+<h2 id="7-最终结论">7. 最终结论</h2>
+
+<p>CLI-Universe 最重要的观点可以概括为：</p>
+
+<blockquote>
+  <p>终端 Agent 的数据瓶颈不是缺少更多自然语言任务，而是缺少能在真实环境中证明“之前失败、之后成功”的监督单元。</p>
+</blockquote>
+
+<p>如果要复用这项工作，我不会先复制它的 6K 数据，而会先复制它的生产纪律：能力覆盖表、证据来源、环境清单、测试/解答隔离、Hint 必要性检查和 fail-to-pass 门禁。真正可迁移的是这套验证结构。</p>
+
+<h2 id="参考">参考</h2>
+
+<ul>
+  <li><a href="https://arxiv.org/abs/2606.22883">CLI-Universe arXiv 页面</a></li>
+  <li><a href="https://arxiv.org/pdf/2606.22883">CLI-Universe PDF</a></li>
+</ul>
+
+            </div>
+        </article>
+
+        
+        
+        
+        
+    </div>
+
+    <aside class="blog-toc-sidebar">
+        <nav id="blog-toc" class="blog-toc-nav" aria-label="Table of contents">
+            <div class="blog-toc-header">
+                <div class="blog-toc-title">On This Page</div>
+                <button
+                    id="blog-toc-toggle"
+                    class="blog-toc-toggle"
+                    type="button"
+                    aria-controls="blog-toc-list"
+                    aria-expanded="true"
+                    aria-label="收起目录"
+                    title="收起目录"
+                >
+                    <svg class="blog-toc-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="blog-toc-list" class="blog-toc-list"></div>
+        </nav>
+    </aside>
+</div>
+
+    </main>
+    <footer class="footer border-top py-2 mt-5 bg-white small">
+    <div class="container-lg">
+        <div class="row my-3">
+            <div class="col-6">
+                <div class="text-muted">
+                    <i>Last updated: Aug 2026</i>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-right text-muted">
+                    Built with <a href="https://github.com/luost26/academic-homepage" target="_blank"><i class="fas fa-pencil-ruler"></i> academic-homepage</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <pagefind-config
+        bundle-path="/paper-notes/pagefind/"
+        base-url="/paper-notes/"
+        excerpt-length="30"
+        lang="zh-CN"></pagefind-config>
+    <div class="modal fade site-search-modal" id="siteSearchModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="siteSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="siteSearchModalLabel">Search</h2>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pagefind-searchbox placeholder="搜索 wiki、论文笔记、关键词..." show-sub-results="true" hide-shortcut="true"></pagefind-searchbox>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" integrity="sha512-XKa9Hemdy1Ui3KSGgJdgMyYlUg1gM+QhL6cnlyTe2qzMCYm4nAZ1PsVerQzTTXzonUR+dmswHqgJPuwCq1MaAg==" crossorigin="anonymous"></script>
+    <script type="module" src="/paper-notes/pagefind/pagefind-component-ui.js"></script>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tocbot@4.36.8/dist/tocbot.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/anchor-js@5.0.0/anchor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            renderMathInElement(document.body, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '\\[', right: '\\]', display: true},
+                  {left: '$', right: '$', display: false},
+                  {left: '\\(', right: '\\)', display: false}
+              ],
+              throwOnError : false
+            });
+            Prism.highlightAll();
+            
+
+            var siteSearchModal = document.getElementById("siteSearchModal");
+            var siteSearchBox = siteSearchModal ? siteSearchModal.querySelector("pagefind-searchbox") : null;
+            function focusSiteSearch() {
+                window.setTimeout(function() {
+                    if (siteSearchBox && typeof siteSearchBox.focus === "function") {
+                        siteSearchBox.focus();
+                    }
+                }, 80);
+            }
+            if (siteSearchModal && window.jQuery) {
+                window.jQuery(siteSearchModal).on("shown.bs.modal", focusSiteSearch);
+            }
+            document.addEventListener("keydown", function(event) {
+                var key = String(event.key || "").toLowerCase();
+                var isSearchShortcut = key === "k" && (event.metaKey || event.ctrlKey);
+                var isModalOpen = siteSearchModal && siteSearchModal.classList.contains("show");
+                var target = event.target;
+                var isTyping = target && (
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable
+                );
+                if (!isSearchShortcut || (isTyping && isModalOpen) || !siteSearchModal || !window.jQuery) return;
+                event.preventDefault();
+                window.jQuery(siteSearchModal).modal("show");
+            });
+        });
+    </script>
+    
+    <script src="/paper-notes/assets/js/blog.js"></script>
+    
+    <script src="/paper-notes/assets/js/common.js"></script>
+</body>
+</html>

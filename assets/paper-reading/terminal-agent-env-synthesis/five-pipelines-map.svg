@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">五篇 terminal-agent environment synthesis 论文的方法地图</title>
+  <desc id="desc">比较 Endless Terminals、TMax、SkillSynth、Terminal-World 与 CLI-Universe 的任务来源、环境构建和质量控制。</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8fc; }
+      .title { font: 700 36px Inter, "Noto Sans SC", sans-serif; fill: #172033; }
+      .subtitle { font: 400 18px Inter, "Noto Sans SC", sans-serif; fill: #586174; }
+      .head { font: 700 21px Inter, "Noto Sans SC", sans-serif; fill: #172033; }
+      .body { font: 400 16px Inter, "Noto Sans SC", sans-serif; fill: #3f485c; }
+      .small { font: 500 14px Inter, "Noto Sans SC", sans-serif; fill: #586174; }
+      .label { font: 700 14px Inter, "Noto Sans SC", sans-serif; fill: #ffffff; letter-spacing: .5px; }
+      .card { fill: #ffffff; stroke: #dfe3ee; stroke-width: 2; }
+      .arrow { stroke: #8993a8; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#8993a8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="900"/>
+  <text x="72" y="70" class="title">Terminal Agent Env：五条合成路线，其实在优化不同瓶颈</text>
+  <text x="72" y="105" class="subtitle">统一观察框架：task seed → environment realization → verifier → trajectory / filtering</text>
+
+  <g transform="translate(70,150)">
+    <rect class="card" rx="18" width="405" height="200"/>
+    <rect x="20" y="20" width="122" height="28" rx="14" fill="#27a45a"/>
+    <text x="81" y="40" text-anchor="middle" class="label">ENDLESS</text>
+    <text x="20" y="78" class="head">把生成拆成 4 个硬门</text>
+    <text x="20" y="110" class="body">category × complexity × scenario</text>
+    <text x="20" y="138" class="body">→ container + initial tests（最多修 3 轮）</text>
+    <text x="20" y="166" class="body">→ final tests → o3 pass@16 可解性过滤</text>
+    <text x="20" y="190" class="small">优化目标：可执行、可解；代价是约一半候选被丢弃</text>
+  </g>
+
+  <g transform="translate(518,150)">
+    <rect class="card" rx="18" width="405" height="200"/>
+    <rect x="20" y="20" width="92" height="28" rx="14" fill="#6a5de8"/>
+    <text x="66" y="40" text-anchor="middle" class="label">TMAX</text>
+    <text x="20" y="78" class="head">把难度做成可采样的轴</text>
+    <text x="20" y="110" class="body">9 axes：domain / skills / persona / fixture…</text>
+    <text x="20" y="138" class="body">→ Gemini 单次生成 task + files + tests + image</text>
+    <text x="20" y="166" class="body">→ 只保 executability，zero-pass 在 RL 侧软过滤</text>
+    <text x="20" y="190" class="small">优化目标：吞吐与难度可控；风险是 verifier/task 质量不先审</text>
+  </g>
+
+  <g transform="translate(966,150)">
+    <rect class="card" rx="18" width="405" height="200"/>
+    <rect x="20" y="20" width="112" height="28" rx="14" fill="#e47a33"/>
+    <text x="76" y="40" text-anchor="middle" class="label">SKILLSYNTH</text>
+    <text x="20" y="78" class="head">先控制“解题路径”，再造任务</text>
+    <text x="20" y="110" class="body">skill → pre/post scenarios → 82K-node graph</text>
+    <text x="20" y="138" class="body">→ inverse-frequency path（长度 1–7）</text>
+    <text x="20" y="166" class="body">→ planner + constructor + oracle/rubric 双验证</text>
+    <text x="20" y="190" class="small">优化目标：minimal trajectory diversity，而不只是题面多样</text>
+  </g>
+
+  <g transform="translate(294,410)">
+    <rect class="card" rx="18" width="405" height="215"/>
+    <rect x="20" y="20" width="150" height="28" rx="14" fill="#2f89c9"/>
+    <text x="95" y="40" text-anchor="middle" class="label">TERMINAL-WORLD</text>
+    <text x="20" y="78" class="head">让 skill 同时约束 what / when / how</text>
+    <text x="20" y="110" class="body">1K skills + 76 teams + 237 graphs × persona</text>
+    <text x="20" y="138" class="body">→ 生成 I/E/V/G 四元组 → 5 维 judge</text>
+    <text x="20" y="166" class="body">→ files/setup/pytest 各自 GVR（最多 3 轮）</text>
+    <text x="20" y="194" class="body">→ Terminus2 + guideline 收 teacher trajectory</text>
+  </g>
+
+  <g transform="translate(742,410)">
+    <rect class="card" rx="18" width="405" height="215"/>
+    <rect x="20" y="20" width="142" height="28" rx="14" fill="#d34b69"/>
+    <text x="91" y="40" text-anchor="middle" class="label">CLI-UNIVERSE</text>
+    <text x="20" y="78" class="head">把“研究证据”和监督密度放到中心</text>
+    <text x="20" y="110" class="body">taxonomy anchor → real technical research → blueprint</text>
+    <text x="20" y="138" class="body">→ pull/adapt 或 synthesize assets → Docker smoke</text>
+    <text x="20" y="166" class="body">→ rubric-gated tests + hint/no-hint 对照</text>
+    <text x="20" y="194" class="body">→ strict fail-before / pass-after（仅 33.6% 留下）</text>
+  </g>
+
+  <path class="arrow" d="M476 250 C500 250 495 250 515 250"/>
+  <path class="arrow" d="M924 250 C948 250 943 250 963 250"/>
+  <path class="arrow" d="M720 360 C720 382 720 384 720 402"/>
+
+  <g transform="translate(70,690)">
+    <rect x="0" y="0" width="1300" height="145" rx="18" fill="#172033"/>
+    <text x="28" y="42" class="label">SHARING 的核心结论</text>
+    <text x="28" y="78" style="font:700 23px Inter,'Noto Sans SC',sans-serif;fill:#ffffff">环境合成不是“让 LLM 写一道题”，而是设计一个可审计的状态转换生产线。</text>
+    <text x="28" y="112" style="font:400 17px Inter,'Noto Sans SC',sans-serif;fill:#c7cede">真正需要选择的是：把成本放在生成前的结构化、生成后的验证，还是训练时的 soft filtering。</text>
+  </g>
+</svg>

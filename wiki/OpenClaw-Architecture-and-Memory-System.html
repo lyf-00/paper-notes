@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Template: https://github.com/luost26/academic-homepage -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="description" content="从 Gateway、agent runtime 与持久会话出发，拆解 OpenClaw 的分层记忆、写入晋升、双通道召回、安全边界，并与 Claude Code、Codex、OpenCode、LangGraph 和 Hermes Agent 对比。">
+    <meta property="og:title" content="OpenClaw 深入介绍：架构、Memory System 与 Harness 对比 - Paper Notes">
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="从 Gateway、agent runtime 与持久会话出发，拆解 OpenClaw 的分层记忆、写入晋升、双通道召回、安全边界，并与 Claude Code、Codex、OpenCode、LangGraph 和 Hermes Agent 对比。">
+    <meta property="og:url" content="https://lyf-00.github.io/paper-notes/wiki/OpenClaw-Architecture-and-Memory-System.html">
+    <title>OpenClaw 深入介绍：架构、Memory System 与 Harness 对比 - Paper Notes</title>
+    <link rel="icon" href="/paper-notes/assets/site-icon.svg" type="image/svg+xml">
+
+    <!-- Stylesheets -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/paper-notes/pagefind/pagefind-component-ui.css">
+    
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/paper-notes/assets/css/blog.css">
+    
+    <link rel="stylesheet" href="/paper-notes/assets/css/global.css">
+</head>
+<body >
+    <a class="sr-only sr-only-focusable skip-link" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-sm navbar-light fixed-top mb-5 shadow-sm">
+    <div class="container-lg">
+        <a class="navbar-brand" href="/paper-notes/"><strong>Paper Notes</strong></a>
+        <button class="nav-search-button nav-search-button-compact d-sm-none ml-auto mr-2" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+            <i class="fas fa-search" aria-hidden="true"></i>
+        </button>
+        <button class="navbar-toggler" style="font-size: 1em; padding: 0.5em;" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-map" aria-hidden="true"></i> Menu
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/">Home</a>
+                </li>
+                
+                <li class="nav-item active">
+                    <a class="nav-link" href="/paper-notes/wiki/">Wiki</a>
+                </li>
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/paper-reading/">Paper Reading</a>
+                </li>
+                
+                <li class="nav-item nav-search-item">
+                    <button class="nav-link nav-search-button" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                        <kbd class="d-none d-md-inline">⌘K</kbd>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    <main id="main-content" class="container-lg">
+        
+
+
+
+
+<div class="reading-progress" aria-hidden="true">
+    <span></span>
+</div>
+
+<div class="blog-layout-wrapper">
+    <div class="blog-main">
+        <div class="mb-3">
+            <a class="small" href="/paper-notes/wiki/">
+                <i class="fas fa-arrow-left"></i> Wiki
+            </a>
+        </div>
+
+        <details class="mobile-toc d-lg-none">
+            <summary>目录</summary>
+            <div id="blog-toc-list-mobile" class="mobile-toc-list"></div>
+        </details>
+
+        <article class="bg-white rounded-xl p-4 p-md-5 mb-4 wiki-note-card" data-pagefind-body>
+            <div class="blog-content wiki-note">
+                <h1 id="openclaw-深入介绍架构memory-system-与-harness-对比">OpenClaw 深入介绍：架构、Memory System 与 Harness 对比</h1>
+
+<blockquote>
+  <p><strong>版本与证据口径。</strong> 本文资料核对日期为 <strong>2026-08-04（Asia/Shanghai）</strong>。此时 GitHub 标记的最新稳定版是 <a href="https://github.com/openclaw/openclaw/releases/tag/v2026.7.1-2"><code class="language-plaintext highlighter-rouge">v2026.7.1-2</code></a>，最新预览版是 <a href="https://github.com/openclaw/openclaw/releases/tag/v2026.7.2-beta.7"><code class="language-plaintext highlighter-rouge">v2026.7.2-beta.7</code></a>。<code class="language-plaintext highlighter-rouge">2026.7.1-2</code> 是修复性发行；本文把稳定能力、当前官方文档中的能力，以及 7.2 预览能力明确区分。OpenClaw 更新很快，部署前应再次查看 <a href="https://github.com/openclaw/openclaw/releases">Releases</a> 与对应版本文档。</p>
+</blockquote>
+
+<h2 id="1-概览">1. 概览</h2>
+
+<p>一句话说，<strong>OpenClaw 不是单纯的聊天机器人，也不只是一个 coding agent CLI，而是一个长期运行、可从多个通信渠道进入、能承载不同 agent runtime 的个人 Agent Gateway</strong>。</p>
+
+<p>典型 coding harness 的默认交互是：用户打开终端或 IDE，给出一个代码任务，agent 在当前仓库里读取文件、执行命令、修改代码，任务结束后退出。OpenClaw 的默认问题则更宽：</p>
+
+<ul>
+  <li>Telegram、Slack、Discord、WhatsApp、Web UI 或原生客户端发来的消息，应该路由给哪个 agent 和 session？</li>
+  <li>agent 能否在用户不盯着终端时继续运行、定时唤醒、发送消息或操作浏览器？</li>
+  <li>多次会话之间怎样保留偏好、项目事实、过去的决定和未来触发条件？</li>
+  <li>当底层执行循环由 OpenClaw、Codex app-server 或外部 Claude Code/OpenCode 接管时，谁拥有 thread、compaction、tools 与 hooks？</li>
+  <li>一个来自网页或群聊的恶意句子，怎样避免被写入长期记忆并在未来反复注入？</li>
+</ul>
+
+<p>因此，更合适的抽象是：</p>
+
+\[\text{OpenClaw}
+= \text{Gateway}
++ \text{session/router}
++ \text{agent runtime adapter}
++ \text{tools/plugins}
++ \text{scheduler}
++ \text{memory system}
++ \text{clients/channels}\]
+
+<p>它最显著的区别不是“能调用更多工具”，而是把 <strong>身份、渠道、会话、记忆、调度和执行 runtime</strong> 放进同一个长期运行的控制面。官方架构中，一个常驻 Gateway 维护消息渠道与 provider 连接，CLI、Web UI、macOS/iOS/Android 节点通过带身份和能力声明的 WebSocket 协议连接；每个 session 内的 agent run 串行化，避免同一会话的工具调用和 transcript 写入互相踩踏（<a href="https://docs.openclaw.ai/concepts/architecture">Gateway architecture</a>，<a href="https://docs.openclaw.ai/concepts/agent-loop">Agent loop</a>）。</p>
+
+<h3 id="11-最重要的三个判断">1.1 最重要的三个判断</h3>
+
+<ol>
+  <li><strong>OpenClaw 更接近“个人 Agent OS / daemon”，Claude Code、Codex、OpenCode 更接近“交互式 coding harness”。</strong> 前者围绕长期在线、消息路由和跨会话连续性设计；后者围绕代码仓库、终端工具和单个开发任务优化。</li>
+  <li><strong>OpenClaw 的 memory 不是一个向量数据库功能，而是一条完整的生命周期。</strong> 它包含写入、分层、来源标记、索引、召回、晋升、去重、覆盖、审阅和遗忘/失效边界。</li>
+  <li><strong>OpenClaw 可以包住其他 harness。</strong> 对 OpenAI 模型，它可以把 turn 交给 Codex app-server；对 Claude Code、Gemini CLI、OpenCode 等外部 harness，则可通过 ACP/acpx 接入。此时必须问“谁拥有 loop 和 canonical thread”，不能笼统地说“OpenClaw 在运行这个模型”（<a href="https://docs.openclaw.ai/concepts/agent-runtimes">Agent runtimes</a>）。</li>
+</ol>
+
+<h2 id="2-版本边界稳定版预览版与滚动文档">2. 版本边界：稳定版、预览版与滚动文档</h2>
+
+<p>OpenClaw 的 release 与主分支文档演进很快。阅读 feature 时应先标注成熟度：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>2026-08-04 的版本</th>
+      <th>应怎样理解</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>最新稳定版</td>
+      <td><code class="language-plaintext highlighter-rouge">2026.7.1-2</code></td>
+      <td>在 <code class="language-plaintext highlighter-rouge">2026.7.1</code> 基础上的修复性发行；<code class="language-plaintext highlighter-rouge">-1</code> 修复 Codex 终态与 Memory Core 启动修复，<code class="language-plaintext highlighter-rouge">-2</code> 修复 npm plugin 更新元数据兼容性</td>
+    </tr>
+    <tr>
+      <td>最新预览版</td>
+      <td><code class="language-plaintext highlighter-rouge">2026.7.2-beta.7</code></td>
+      <td>预览 7.2 的新状态安全、durable channel delivery、session rewind/branching、MCP Apps、memory 与 scheduling 改进</td>
+    </tr>
+    <tr>
+      <td>当前官方文档</td>
+      <td>随主线持续更新</td>
+      <td>可能描述尚未进入最新稳定版的能力；适合判断方向和配置，但不能自动当作稳定发行承诺</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>稳定版 <code class="language-plaintext highlighter-rouge">2026.7.1</code> 的核心更新集中在 Control UI、onboarding、移动/桌面客户端、GPT-5.6 与 provider 兼容、Codex/外部 coding agent 工作流、渠道可靠性、scheduled work 和 Gateway 恢复（<a href="https://github.com/openclaw/openclaw/releases/tag/v2026.7.1">v2026.7.1 release notes</a>）。</p>
+
+<p><code class="language-plaintext highlighter-rouge">2026.7.2-beta.7</code> 则把 memory 作为显式 highlight：更快的 Active Memory、个人安装默认的私有跨会话召回、从 Claude Code/Codex/Hermes 导入 Markdown memory，以及独立 Memory 设置页；同时还预览 crash-safe SQLite snapshot、隔离恢复、会话分支、durable ingress 和 MCP Apps（<a href="https://github.com/openclaw/openclaw/releases/tag/v2026.7.2-beta.7">v2026.7.2-beta.7 release notes</a>）。本文后续提到这些能力时会标为 <strong>7.2 预览/当前文档</strong>。</p>
+
+<h2 id="3-openclaw-的整体架构">3. OpenClaw 的整体架构</h2>
+
+<h3 id="31-gateway-是中心不是某个-cli-进程">3.1 Gateway 是中心，不是某个 CLI 进程</h3>
+
+<p>OpenClaw 的 Gateway 是常驻 daemon，负责：</p>
+
+<ul>
+  <li>维护 Telegram、Slack、Discord、WhatsApp 等 channel/provider 连接；</li>
+  <li>提供类型化 WebSocket API，接收请求并推送 agent、chat、presence、health、heartbeat、automation（按确定时间或周期触发的任务）等事件；</li>
+  <li>管理设备身份、pairing、token 和非本地连接的信任边界；</li>
+  <li>把消息解析成 session，再把 turn 交给选定 runtime；</li>
+  <li>串行持久化 transcript、session metadata、scheduled work 和部分 memory index。</li>
+</ul>
+
+<p>这与“每次执行 <code class="language-plaintext highlighter-rouge">claude</code>、<code class="language-plaintext highlighter-rouge">codex</code> 或 <code class="language-plaintext highlighter-rouge">opencode</code> 启动一个交互进程”不同。OpenClaw 的生命周期独立于某次终端会话，因此它天然适合：长期在线助手、跨设备入口、主动通知、定时任务、群组/私聊路由和远程节点能力。</p>
+
+<h3 id="32-session-是运行隔离单元memory-不是-session">3.2 Session 是运行隔离单元，memory 不是 session</h3>
+
+<p>必须区分四个概念：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>概念</th>
+      <th>回答的问题</th>
+      <th>OpenClaw 中的典型载体</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Context</td>
+      <td>模型这一次推理看见什么？</td>
+      <td>system prompt、bootstrap files、近期消息、compact summary、召回片段、tool result</td>
+    </tr>
+    <tr>
+      <td>Session / thread</td>
+      <td>对话与执行属于哪条连续轨迹？</td>
+      <td>session key、SQLite transcript、运行队列、channel routing metadata</td>
+    </tr>
+    <tr>
+      <td>Memory</td>
+      <td>哪些事实可跨会话保存并在未来选择性召回？</td>
+      <td><code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code>、<code class="language-plaintext highlighter-rouge">memory/*.md</code>、索引与 memory plugin</td>
+    </tr>
+    <tr>
+      <td>Automation / intent（前者由时间触发，后者由未来消息或事件触发）</td>
+      <td>什么时候应该再次行动？</td>
+      <td>scheduled tasks/cron、standing intent 的 SQLite 状态机</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>“transcript 在磁盘上”不等于“模型能想起”；“写进 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>”也不等于“权限已被强制执行”。Session 解决轨迹连续性，memory 解决未来选择性上下文，automation/intent 解决触发，sandbox/approval 才解决强制权限。</p>
+
+<h3 id="33-runtime-ownership-可以切换">3.3 Runtime ownership 可以切换</h3>
+
+<p>OpenClaw 当前同时支持多种 runtime ownership：</p>
+
+<ul>
+  <li><strong>OpenClaw embedded runtime</strong>：OpenClaw 拥有 model loop、tool loop、transcript 与 compaction。</li>
+  <li><strong>Codex app-server runtime</strong>：Codex 拥有原生 thread、agent loop、原生 shell/file tools 与 compaction；OpenClaw 保留 channel delivery，镜像 transcript，并把 OpenClaw context 与动态工具投影给 Codex。直观地说，<strong>OpenClaw 负责“从哪里收到消息、把结果送回哪里，以及额外提供什么上下文和工具”，Codex 负责“这一轮怎样思考、调用原生工具和维护权威 thread”</strong>。</li>
+  <li><strong>ACP/acpx 外部 runtime</strong>：适用于显式要求 ACP 的 Codex，或 Claude Code、Gemini CLI、OpenCode、Cursor 等外部 harness。</li>
+</ul>
+
+<details>
+  <summary><strong>点击展开：channel delivery、transcript mirror 与 context/tool projection 到底是什么意思？</strong></summary>
+
+  <p>这里描述的是一个<strong>外层控制面包住内层 coding harness</strong> 的结构，而不是 OpenClaw 和 Codex 同时控制同一份状态：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Telegram / Slack / Web UI
+          │ inbound message
+          ▼
+OpenClaw Gateway
+  - 认证发送者、选择 agent/session
+  - 组装 OpenClaw context
+  - 暴露可桥接的动态工具
+          │ projected turn
+          ▼
+Codex app-server
+  - canonical Codex thread
+  - Codex agent loop
+  - Codex 原生 shell/file tools
+  - Codex compaction
+          │ events + final result
+          ▼
+OpenClaw transcript mirror + channel delivery
+          │
+          ▼
+原来的聊天渠道
+</code></pre></div>  </div>
+
+  <h4 id="openclaw--channel-delivery">1. OpenClaw 保留 channel delivery</h4>
+
+  <p>消息入口和回复出口仍由 OpenClaw 管理。例如用户从 Telegram 发来任务：</p>
+
+  <ol>
+    <li>OpenClaw 验证 Telegram sender，解析应该进入哪个 agent 和 session；</li>
+    <li>OpenClaw 把整理后的 turn 交给 Codex app-server；</li>
+    <li>Codex 产生 progress、tool event 和最终回复；</li>
+    <li>OpenClaw 再负责 Telegram 的格式转换、分片、重试、限流和最终发送。</li>
+  </ol>
+
+  <p>因此 Codex 不需要知道 Telegram bot token、Slack thread id 或消息重试策略。它只负责 agent turn，OpenClaw 负责现实渠道中的收发语义。</p>
+
+  <h4 id="openclaw--transcript">2. OpenClaw 镜像 transcript</h4>
+
+  <p>当使用 Codex app-server runtime 时，<strong>Codex thread 是权威状态（canonical thread）</strong>。OpenClaw 保存一份与渠道/session 对齐的 transcript mirror，供自己的 UI、routing、检索、恢复提示和交付状态使用。</p>
+
+  <p>“镜像”不等于两边都是可随意改写的主数据库：</p>
+
+  <ul>
+    <li>resume、fork、compaction 和原生 turn history 以 Codex thread 为准；</li>
+    <li>OpenClaw 接收 Codex runtime events，将可表示的消息和状态同步到自己的 transcript；</li>
+    <li>镜像短暂落后时，不代表 Codex 的原生 thread 已经丢失；</li>
+    <li>OpenClaw 不应绕过 Codex protocol，直接重写 Codex 不支持修改的内部 history。</li>
+  </ul>
+
+  <p>这类似于 GitHub 是 issue 的权威数据源，而本地 dashboard 保存一份用于展示和搜索的同步副本：副本有用，但不能反过来假定自己拥有全部语义。</p>
+
+  <h4 id="openclaw-context--codex">3. OpenClaw context 投影给 Codex</h4>
+
+  <p>OpenClaw 仍然拥有一些 Codex 原生 thread 之外的信息，例如：</p>
+
+  <ul>
+    <li>当前 channel、sender 和 OpenClaw agent/session 身份；</li>
+    <li>workspace bootstrap files、OpenClaw instructions 与 skills 摘要；</li>
+    <li><code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 或检索得到的 memory context；</li>
+    <li>OpenClaw plugin 在 <code class="language-plaintext highlighter-rouge">before_prompt_build</code> 等阶段生成的附加上下文。</li>
+  </ul>
+
+  <p>“投影”表示 OpenClaw 把这些信息转换成 <strong>Codex 本轮可以接收的 submitted context</strong>，随 turn 送入 Codex，而不是把它们永久写进 Codex 模型权重，也不等于把整个 OpenClaw 数据库复制进 Codex thread。</p>
+
+  <p>可以把本轮模型输入近似理解为：</p>
+
+\[\text{Codex turn context}
+= \text{Codex native thread context}
++ \text{OpenClaw projected context}\]
+
+  <p>其中 Codex 仍决定怎样压缩自己的 thread；OpenClaw 只能通过已支持的 runtime event、hook 和 submitted context 保持兼容。</p>
+
+  <h4 id="openclaw--codex">4. OpenClaw 动态工具投影给 Codex</h4>
+
+  <p>OpenClaw plugin 可能在运行时才注册工具，例如消息发送、memory search 或某个连接器工具。这些不是 Codex 固定内置的 shell/file tool。OpenClaw adapter 会把允许的工具描述桥接到 Codex 当前 turn；Codex 选择调用后，请求回到 OpenClaw 执行，再把结果作为 tool result 返回 Codex loop。</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Codex 决定调用 memory_search
+  -&gt; Codex/OpenClaw adapter
+  -&gt; OpenClaw memory plugin 执行
+  -&gt; 结果经过边界处理
+  -&gt; 返回 Codex thread
+  -&gt; Codex 继续生成回复
+</code></pre></div>  </div>
+
+  <p>这里有三个限制：</p>
+
+  <ul>
+    <li>Codex 原生 shell/file tools 仍由 Codex 及其 sandbox/approval policy 控制；</li>
+    <li>只有 runtime adapter 和 hook 明确支持的 OpenClaw surface 才能被桥接，不能假设所有 plugin 行为自动生效；</li>
+    <li>如果 Codex workspace 是只读的，投影一个 memory/tool 指令不会凭空获得写权限。</li>
+  </ul>
+
+  <h4 id="section">5. 最简判断方法</h4>
+
+  <p>遇到组合运行时的问题时，分别问：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>问题</th>
+        <th>主要 owner</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Telegram/Slack 消息从哪里来、结果发到哪里？</td>
+        <td>OpenClaw</td>
+      </tr>
+      <tr>
+        <td>当前代码 turn 怎样循环和调用原生文件工具？</td>
+        <td>Codex</td>
+      </tr>
+      <tr>
+        <td>哪份 thread 是 resume/compaction 的权威状态？</td>
+        <td>Codex</td>
+      </tr>
+      <tr>
+        <td>OpenClaw UI 为什么还能显示这次对话？</td>
+        <td>OpenClaw 保存 transcript mirror</td>
+      </tr>
+      <tr>
+        <td>用户偏好或 channel metadata 怎样进入 Codex？</td>
+        <td>OpenClaw 将其投影为本轮 context</td>
+      </tr>
+      <tr>
+        <td>OpenClaw plugin tool 怎样被 Codex 调用？</td>
+        <td>Adapter 暴露 schema，OpenClaw 执行，结果返回 Codex</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="codex-adapter-">6. Codex adapter 的官方源码入口</h4>
+
+  <p>下面这些链接指向 OpenClaw 官方仓库的当前 <code class="language-plaintext highlighter-rouge">main</code> 分支，可直接从“注册入口”一路追到“上下文与工具怎样进入 Codex”：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>代码位置</th>
+        <th>作用</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/index.ts#L162-L170"><code class="language-plaintext highlighter-rouge">extensions/codex/index.ts</code>：注册 harness</a></td>
+        <td>Codex plugin 入口；调用 <code class="language-plaintext highlighter-rouge">registerAgentHarness(...)</code> 把 adapter 注册到 OpenClaw runtime</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/harness.ts#L41-L70"><code class="language-plaintext highlighter-rouge">extensions/codex/harness.ts</code>：harness 定义</a></td>
+        <td>定义 runtime identity、capabilities、delivery defaults，以及 attempt、usage、compaction、reset 等生命周期入口</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/harness.ts#L174-L182"><code class="language-plaintext highlighter-rouge">extensions/codex/harness.ts</code>：执行 attempt</a></td>
+        <td>把一次 OpenClaw run 交给 Codex app-server，并开启 native hook relay</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/attempt-context.ts"><code class="language-plaintext highlighter-rouge">extensions/codex/src/app-server/attempt-context.ts</code></a></td>
+        <td>组装 workspace bootstrap、memory context、developer instructions，并计算动态工具投影是否需要更新</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/client.ts"><code class="language-plaintext highlighter-rouge">extensions/codex/src/app-server/client.ts</code></a></td>
+        <td>Codex app-server client、协议请求与事件连接的主要实现</td>
+      </tr>
+      <tr>
+        <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/compact.ts"><code class="language-plaintext highlighter-rouge">extensions/codex/src/app-server/compact.ts</code></a></td>
+        <td>Codex thread 的 native compaction 桥接</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>这些是“源码地图”，不是稳定 API 承诺。<code class="language-plaintext highlighter-rouge">main</code> 分支的文件和行号可能随重构变化；做审计、引用或复现实验时，应把链接中的 <code class="language-plaintext highlighter-rouge">main</code> 换成具体 release tag 或 commit SHA。</p>
+
+</details>
+
+<p>这带来一个关键结论：<strong>OpenClaw 与 Codex/Claude Code 不是完全互斥的横向竞品。</strong> OpenClaw 可以处在更外层，负责渠道、身份、调度和持久状态，而把一次具体 turn 的内层循环交给 coding harness。对比时应分别比较“外层运行控制面”和“内层 agent loop”。</p>
+
+<h2 id="4-agent-loop-与持久执行">4. Agent loop 与持久执行</h2>
+
+<p>OpenClaw 的单次 turn 大致经历：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>channel / UI message
+  -&gt; Gateway 校验身份与参数
+  -&gt; 解析 agent + session key
+  -&gt; 写入 session metadata，立即返回 runId
+  -&gt; per-session queue 串行调度
+  -&gt; 选择 model/provider/runtime
+  -&gt; 装载 skills + bootstrap + memory/context
+  -&gt; model &lt;-&gt; tool loop
+  -&gt; stream assistant/tool/lifecycle events
+  -&gt; transcript（运行轨迹记录）与 usage（资源计量数据）持久化
+  -&gt; channel delivery
+</code></pre></div></div>
+
+<p>这里的工程价值主要在三处：</p>
+
+<ol>
+  <li><strong>每个 session 有自己的 lane。</strong> 同一 session 的 run 串行执行，transcript append/rewrite 还经过 SQLite writer queue 和 session identity 检查，降低旧 run 覆盖新 generation 的风险。</li>
+  <li><strong>接受与完成分离。</strong> Gateway 可以先返回 <code class="language-plaintext highlighter-rouge">runId</code>——即这一次已被接受的运行实例的关联 ID——再由客户端监听 streaming events、查询状态或调用 wait。客户端不用一直占住最初的请求连接，也能在断线重连后继续追踪同一个长任务。</li>
+  <li><strong>hooks 位于真实生命周期。</strong> <code class="language-plaintext highlighter-rouge">before_prompt_build</code>、<code class="language-plaintext highlighter-rouge">before_tool_call</code>、<code class="language-plaintext highlighter-rouge">agent_end</code>、<code class="language-plaintext highlighter-rouge">before_compaction</code>、<code class="language-plaintext highlighter-rouge">message_sending</code> 等 hook 能围绕 model、tool、message 与 session 边界工作，例如注入本轮上下文、阻止危险工具调用、在压缩前落盘关键状态，或在发送前脱敏；它们不只是往 system prompt 里塞一段文字。</li>
+</ol>
+
+<details>
+  <summary><strong>点击展开：transcript 和 usage 分别是什么？</strong></summary>
+
+  <h4 id="transcript">Transcript：可恢复、可审计的运行轨迹</h4>
+
+  <p><code class="language-plaintext highlighter-rouge">transcript</code> 是按 session/thread 组织的交互记录，通常包含用户消息、assistant 消息、工具调用、工具结果以及可表示的 lifecycle event。它的主要用途是：</p>
+
+  <ul>
+    <li>让 UI 重建“刚才发生了什么”；</li>
+    <li>让 session resume、检索、调试和审计有持久依据；</li>
+    <li>在 OpenClaw 包住 Codex 时，保存一份与 channel/session 对齐的 mirror。</li>
+  </ul>
+
+  <p>它不等于模型当轮看到的完整 <code class="language-plaintext highlighter-rouge">context</code>：context 还可能包含 system prompt、隐藏的 memory recall、bootstrap files 和压缩摘要，而 transcript 中的旧内容也可能因 compaction 不再逐字进入下一轮。它也不等于操作系统日志，更不应被理解为保存模型的私有推理过程。</p>
+
+  <h4 id="usage">Usage：一次运行消耗了多少资源</h4>
+
+  <p><code class="language-plaintext highlighter-rouge">usage</code> 是计量与观测数据，例如所用 provider/model、输入与输出 token、缓存 token、运行时长，以及在 provider 给出价格信息时可推导的成本。它主要用于预算、限额、成本展示、性能诊断和容量规划。</p>
+
+  <p>例如，同一次 run 可以留下：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>transcript: 用户要求改文件 -&gt; assistant 调用读取工具 -&gt; 工具返回 -&gt; assistant 给出结果
+usage:      model=gpt-5.x, input=8k tokens, output=1.2k tokens, duration=34s
+</code></pre></div>  </div>
+
+  <p>因此 transcript 回答“发生了什么”，usage 回答“为此消耗了多少”。usage 不是用户画像，也不能替代 transcript 来恢复对话语义。</p>
+
+</details>
+
+<details>
+  <summary><strong>点击展开：为什么先返回 runId？</strong></summary>
+
+  <p>把一次运行拆成“已接受”和“已完成”两个阶段，本质上是把长任务从一次脆弱的同步连接，变成一个可以被独立寻址的后台对象：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>客户端 POST agent/run
+  &lt;- accepted: { runId: "run_42" }
+
+后台 run_42: queued -&gt; running -&gt; waiting_for_tool -&gt; completed
+客户端可用 run_42: 订阅事件 / 查询状态 / wait / cancel
+</code></pre></div>  </div>
+
+  <p>具体优势有六类：</p>
+
+  <ol>
+    <li><strong>请求不会被长任务绑死。</strong> HTTP/WebSocket 入口可以很快确认接收；任务执行十分钟，也不要求最初那条请求连接保持十分钟。</li>
+    <li><strong>断线后仍能恢复观察。</strong> 手机切网、App 进入后台或 Gateway 重连后，客户端拿 <code class="language-plaintext highlighter-rouge">runId</code> 重新订阅或 wait，仍能定位原来的运行，而不是盲目再提交一次。</li>
+    <li><strong>事件可以正确归属。</strong> 多个 session 或多个 run 并发流式输出时，progress、tool event、usage 和终态都能用 <code class="language-plaintext highlighter-rouge">runId</code> 关联，避免 UI 把 A 任务的事件显示到 B 任务。</li>
+    <li><strong>状态与控制面更清楚。</strong> 服务端可以明确表示 <code class="language-plaintext highlighter-rouge">queued / running / completed / failed / cancelled</code>，客户端也能对指定 run 做 wait、取消或获取最终结果。</li>
+    <li><strong>适合 channel delivery。</strong> Telegram/Slack webhook 通常要求快速响应，Gateway 可以先确认收到，再在 run 完成后通过原 channel 异步交付，不受 webhook 超时限制。</li>
+    <li><strong>便于可靠性与观测。</strong> 排队时间、执行时间、重试、错误、usage 和最终 delivery 都能挂在同一个关联 ID 上，排障时可以追踪完整链路。</li>
+  </ol>
+
+  <p>一个移动端例子：用户提交代码审查，立即拿到 <code class="language-plaintext highlighter-rouge">run_42</code>；两秒后手机断网。任务仍在服务器运行。五分钟后用户重新打开 App，客户端用 <code class="language-plaintext highlighter-rouge">run_42</code> 查询，得到已完成结果并补拉漏掉的事件。若没有稳定 ID，客户端很难判断应该继续等、重新提交，还是任务其实已经完成；错误地重提还可能造成重复发消息或重复修改文件。</p>
+
+  <p>但要注意三个边界：</p>
+
+  <ul>
+    <li>拿到 <code class="language-plaintext highlighter-rouge">runId</code> 只表示服务端<strong>接受/登记了运行</strong>，不表示运行成功；最终仍要检查 terminal status。</li>
+    <li><code class="language-plaintext highlighter-rouge">wait</code> 超时通常只表示客户端不再等待，不必然停止后台 run；取消要使用明确的 cancel 语义。</li>
+    <li><code class="language-plaintext highlighter-rouge">runId</code> 是关联标识，不天然等于幂等键。要防止“重试提交产生两个 run”，协议还需要 idempotency key、request key 或服务端去重规则。</li>
+  </ul>
+
+</details>
+
+<details>
+  <summary><strong>点击展开：lifecycle hooks 的实际例子</strong></summary>
+
+  <p>下面是概念化伪代码，用来说明每个 hook 所处的边界；具体参数名和返回结构应以安装版本的 plugin API 为准。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Hook</th>
+        <th>发生时机</th>
+        <th>实际用途示例</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code class="language-plaintext highlighter-rouge">before_prompt_build</code></td>
+        <td>模型输入组装前</td>
+        <td>给私聊注入用户偏好和项目摘要；给群聊省略私有 memory；根据 channel 添加回复格式要求</td>
+      </tr>
+      <tr>
+        <td><code class="language-plaintext highlighter-rouge">before_tool_call</code></td>
+        <td>工具真正执行前</td>
+        <td>拒绝包含危险路径的 shell 参数；限制 message tool 的目标 channel；记录审计字段或规范化参数</td>
+      </tr>
+      <tr>
+        <td><code class="language-plaintext highlighter-rouge">agent_end</code></td>
+        <td>agent run 到达终态时</td>
+        <td>汇总 usage/耗时、更新任务台账、把候选事实交给异步 memory consolidation，或发出内部监控事件</td>
+      </tr>
+      <tr>
+        <td><code class="language-plaintext highlighter-rouge">before_compaction</code></td>
+        <td>旧上下文被压缩前</td>
+        <td>把尚未落盘的决定、当前目标、关键文件路径和测试结果写入 durable daily note，再允许生成摘要</td>
+      </tr>
+      <tr>
+        <td><code class="language-plaintext highlighter-rouge">message_sending</code></td>
+        <td>回复发往真实 channel 前</td>
+        <td>脱敏 token、阻止私有内容发到群聊、按 Telegram/Slack 限制分片，或在策略不满足时取消发送</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="language-ts highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 概念示例 1：按 channel 控制上下文</span>
+<span class="nx">before_prompt_build</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">channel</span><span class="p">.</span><span class="nx">kind</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">direct</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">appendContext</span><span class="p">:</span> <span class="nx">loadPrivateUserPreferences</span><span class="p">(</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">sender</span><span class="p">)</span> <span class="p">};</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">{</span> <span class="na">appendContext</span><span class="p">:</span> <span class="dl">"</span><span class="s2">这是群聊：不要调用或复述私有跨会话记忆。</span><span class="dl">"</span> <span class="p">};</span>
+<span class="p">}</span>
+
+<span class="c1">// 概念示例 2：工具执行前做确定性检查</span>
+<span class="nx">before_tool_call</span><span class="p">(</span><span class="nx">call</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">call</span><span class="p">.</span><span class="nx">name</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">exec</span><span class="dl">"</span> <span class="o">&amp;&amp;</span> <span class="nx">touchesProtectedPath</span><span class="p">(</span><span class="nx">call</span><span class="p">.</span><span class="nx">args</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">block</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">reason</span><span class="p">:</span> <span class="dl">"</span><span class="s2">目标路径不在允许的 workspace 内</span><span class="dl">"</span> <span class="p">};</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// 概念示例 3：压缩前保存仍需精确保留的状态</span>
+<span class="nx">before_compaction</span><span class="p">(</span><span class="nx">session</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">appendDailyNote</span><span class="p">({</span>
+    <span class="na">goal</span><span class="p">:</span> <span class="nx">session</span><span class="p">.</span><span class="nx">currentGoal</span><span class="p">,</span>
+    <span class="na">decisions</span><span class="p">:</span> <span class="nx">session</span><span class="p">.</span><span class="nx">unflushedDecisions</span><span class="p">,</span>
+    <span class="na">files</span><span class="p">:</span> <span class="nx">session</span><span class="p">.</span><span class="nx">modifiedFiles</span><span class="p">,</span>
+    <span class="na">tests</span><span class="p">:</span> <span class="nx">session</span><span class="p">.</span><span class="nx">latestTestResults</span><span class="p">,</span>
+  <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="c1">// 概念示例 4：发送前防止跨 channel 泄漏</span>
+<span class="nx">message_sending</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span> <span class="nx">route</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">clean</span> <span class="o">=</span> <span class="nx">redactSecrets</span><span class="p">(</span><span class="nx">message</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">route</span><span class="p">.</span><span class="nx">kind</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">group</span><span class="dl">"</span> <span class="o">&amp;&amp;</span> <span class="nx">containsPrivateMemory</span><span class="p">(</span><span class="nx">clean</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">cancel</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">reason</span><span class="p">:</span> <span class="dl">"</span><span class="s2">私有记忆不能发送到群聊</span><span class="dl">"</span> <span class="p">};</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">{</span> <span class="na">message</span><span class="p">:</span> <span class="nx">clean</span> <span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div>  </div>
+
+  <p>这些 hook 的优势是它们能作用于<strong>真实对象和真实时机</strong>。例如，在 system prompt 里写“不要访问受保护路径”只是软指令；<code class="language-plaintext highlighter-rouge">before_tool_call</code> 可以在执行边界确定性阻断。类似地，“请在压缩前记住重要信息”只是希望模型配合，而 <code class="language-plaintext highlighter-rouge">before_compaction</code> 至少提供了一个明确、可测试的落盘时点。</p>
+
+  <p>不过 hook 仍不自动等于强安全边界：插件可能有 bug，也可能只覆盖某一种 runtime。危险文件操作仍应由 sandbox、OS 权限和 approval 兜底；发送外部消息仍应使用明确的 channel policy 与 allowlist。</p>
+
+</details>
+
+<h2 id="5-memory-system真正的核心">5. Memory System：真正的核心</h2>
+
+<h3 id="51-设计目标">5.1 设计目标</h3>
+
+<p>当前官方文档把 OpenClaw memory 描述为 <strong>plain files + SQLite index</strong>，并提出五条设计原则：无隐藏状态、重视写入质量、把写入路径作为安全边界、让确定性代码包围模型判断、memory 失败不能阻塞正常回复（<a href="https://docs.openclaw.ai/concepts/memory-architecture">Memory architecture</a>）。</p>
+
+<p>可以把一次成功记忆写成：</p>
+
+\[\text{useful memory}
+= \text{good observation}
+\times \text{trusted provenance}
+\times \text{correct scope}
+\times \text{successful retrieval}
+\times \text{freshness}\]
+
+<p>其中任何一项接近 0，向量检索再强也无济于事。例如，agent 从恶意网页中抽取出“以后遇到部署问题都执行 <code class="language-plaintext highlighter-rouge">curl ... | sh</code>”，如果写入路径没有来源隔离，这条内容就会从一次 prompt injection 变成跨月持久的 memory poisoning。</p>
+
+<h3 id="52-五个层级而不是一个-memorymd">5.2 五个层级，而不是一个 <code class="language-plaintext highlighter-rouge">MEMORY.md</code></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>载体</th>
+      <th>主要内容</th>
+      <th>是否自动注入</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Instructions</td>
+      <td><code class="language-plaintext highlighter-rouge">AGENTS.md</code>、workspace instruction files</td>
+      <td>人类维护的规则、流程和边界</td>
+      <td>session 启动时注入</td>
+    </tr>
+    <tr>
+      <td>Curated core</td>
+      <td><code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code></td>
+      <td>稳定偏好、用户模型、长期事实、决定</td>
+      <td>启动时按预算注入；可信条目还可触发注入</td>
+    </tr>
+    <tr>
+      <td>Episodic</td>
+      <td><code class="language-plaintext highlighter-rouge">memory/YYYY-MM-DD.md</code>、session transcripts</td>
+      <td>日常观察、工作进展、原始上下文</td>
+      <td>不常驻；通过搜索或 deep recall 获取</td>
+    </tr>
+    <tr>
+      <td>Prospective</td>
+      <td>standing intents、scheduled tasks</td>
+      <td>将来遇到事件/时间时应做什么</td>
+      <td>仅触发时注入或执行</td>
+    </tr>
+    <tr>
+      <td>Review</td>
+      <td><code class="language-plaintext highlighter-rouge">DREAMS.md</code>、dreaming reports</td>
+      <td>晋升过程、摘要、pre-image 和审阅线索</td>
+      <td>不注入，供人类审计</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这套分层的重点是 <strong>常驻上下文与可检索档案分离</strong>。<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 不是无限增长的历史仓库，而是小而精选的核心；daily notes 和 transcript 承担大容量 episodic storage。若 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 超出 bootstrap budget，磁盘文件仍完整，但注入副本会被截断，因此“文件存在”不代表“模型看见了全部内容”（<a href="https://docs.openclaw.ai/concepts/memory">Memory overview</a>）。</p>
+
+<h4 id="四类工作区文件的精确语义">四类工作区文件的精确语义</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>文件</th>
+      <th>谁维护</th>
+      <th>何时进入模型</th>
+      <th>适合内容</th>
+      <th>不适合内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">USER.md</code>（可选）</td>
+      <td>人、显式记忆请求、受控 consolidation</td>
+      <td>session 启动时以独立小预算加载；长期 session 会刷新</td>
+      <td>稳定偏好、沟通方式、关系、活跃项目；写成 <code class="language-plaintext highlighter-rouge">Always/Prefer/Never</code> 式 directive</td>
+      <td>原始聊天记录、网页摘录、一次性任务状态</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MEMORY.md</code></td>
+      <td>显式用户请求或 Dreaming 的 deep consolidation</td>
+      <td>session 启动时按 bootstrap budget 加载；可信 trigger 还可在相关 turn 靠近 query 注入</td>
+      <td>耐久的非 profile 事实、长期决定、简短结论</td>
+      <td>每日流水、完整 transcript、无限增长的知识库</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">memory/YYYY-MM-DD.md</code> 与 <code class="language-plaintext highlighter-rouge">memory/YYYY-MM-DD-&lt;slug&gt;.md</code></td>
+      <td>正常工作中的 agent、session-memory hook、pre-compaction flush</td>
+      <td>普通 turn 不常驻；bare <code class="language-plaintext highlighter-rouge">/new</code> 或 <code class="language-plaintext highlighter-rouge">/reset</code> 会自动加载今天和昨天的 dated notes；其余通过检索读取</td>
+      <td>观察、进度、上下文、session 摘要、尚未确认是否耐久的事实</td>
+      <td>默认自动执行的规则或硬权限</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DREAMS.md</code> / <code class="language-plaintext highlighter-rouge">dreams.md</code></td>
+      <td>Dreaming phase 与 grounded backfill</td>
+      <td><strong>永不作为普通 memory 自动注入，也不作为晋升来源</strong></td>
+      <td>人类审阅用的 Dream Diary、phase 摘要、rewrite 数量和 diff highlights</td>
+      <td>agent 的事实 source of truth</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>默认 workspace 是 <code class="language-plaintext highlighter-rouge">~/.openclaw/workspace</code>。Builtin engine 会索引已有的 <code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 和 <code class="language-plaintext highlighter-rouge">memory/*.md</code>；它不会自动创建 <code class="language-plaintext highlighter-rouge">USER.md</code>。默认 chunk 大约是 <strong>400 tokens、80-token overlap</strong>，索引位于每个 agent 自己的 SQLite 数据库 <code class="language-plaintext highlighter-rouge">~/.openclaw/agents/&lt;agentId&gt;/agent/openclaw-agent.sqlite</code>。文件变化经过约 1.5 秒 debounce 后增量重建；provider、embedding model、chunking、sources 或 scope 改变时，索引 identity 也会变化，需要显式重建（<a href="https://docs.openclaw.ai/concepts/memory-builtin">Builtin memory engine</a>）。</p>
+
+<h3 id="53-usermd-与-memorymd-为什么分开">5.3 <code class="language-plaintext highlighter-rouge">USER.md</code> 与 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 为什么分开</h3>
+
+<p><code class="language-plaintext highlighter-rouge">USER.md</code> 是用户模型层，适合写：</p>
+
+<ul>
+  <li>稳定偏好与沟通方式；</li>
+  <li>角色、关系、时区；</li>
+  <li>当前活跃项目；</li>
+  <li>带 observed date、active/superseded 状态的 directive。</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">MEMORY.md</code> 则适合写非 profile 的耐久事实、长期决定和短摘要。偏好变化时，正确做法不是并排追加“用户喜欢简洁”和“用户喜欢详细”，而是把旧 directive 标为 superseded 或原位更新。分开后，召回策略也可以不同：事实需要相关性，偏好更需要靠近当前 query 的 directive restatement。</p>
+
+<h4 id="action-sensitive-memory不只记事实还要记行动边界">Action-sensitive memory：不只记事实，还要记行动边界</h4>
+
+<p>如果一条记忆会改变未来行为，就应同时记录它<strong>何时可执行、何时失效、谁有权批准，以及不能做什么</strong>。特别是以下内容：临时授权、审批要求、跨 session handoff、安全操作窗口、到期限制和“在某条件前不要行动”。</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">-</span> API migration 正在另一个 session 设计。本 session 的发现只能作为设计输入；
+  在迁移方案被 owner 批准前，不要修改 API implementation。
+  Observed: 2026-08-04; Owner: user; Expires/unlocks: migration plan approved.
+</code></pre></div></div>
+
+<p>这种写法比“API migration 正在进行”多保存了行动条件，降低未来 agent 把背景事实误解成执行授权的风险。但 memory 只能保存 approval context，不能实施 policy；真正的写权限仍由 approval、sandbox、OS ACL 和 scheduled-task policy 控制。</p>
+
+<h3 id="54-写入路径先落-episodic再晋升-curated">5.4 写入路径：先落 episodic，再晋升 curated</h3>
+
+<p>在 <strong>7.2 预览/当前滚动文档架构</strong> 中，长期 memory 的主写入者不是普通回复 agent，而是 background dreaming consolidation。Dreaming 不是“模型睡觉时自由联想”，而是一个有确定性 gate、有 provenance 限制、有审计记录的离线整理 pipeline：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>交互式会话 / session end / pre-compaction flush
+  -&gt; daily notes + transcripts（episodic）
+  -&gt; 建索引并记录 provenance
+  -&gt; Light：去重、暂存、积累 reinforcement
+  -&gt; REM：按主题反思、形成 recurring-theme signals
+  -&gt; Deep：确定性 gate + 有界 consolidation model turn
+  -&gt; merge / dedupe / supersede
+  -&gt; MEMORY.md
+  -&gt; DREAMS.md 审阅记录；旧 MEMORY.md pre-image 存入 SQLite plugin state
+</code></pre></div></div>
+
+<p><img src="../assets/wiki/openclaw-architecture-and-memory-system/memory-write-pipeline.png" alt="OpenClaw memory 从 episodic evidence 经确定性 Dreaming gate 和有界 consolidation 进入长期记忆的写入流程" /></p>
+
+<p>这张图最重要的分界是中间两步：<strong>Dreaming gate 是确定性代码，Consolidation 才使用生成式模型</strong>。左边的 notes、transcript 和 flush 只是证据来源；它们不会因为被保存或被 embedding 就自动成为长期记忆。图中终点写成 <code class="language-plaintext highlighter-rouge">MEMORY.md / USER.md</code>，表达 curated core 的整体概念；但当前滚动版 <a href="https://docs.openclaw.ai/concepts/dreaming">Dreaming 文档</a>进一步收紧了实现口径：自动 long-term promotion 只写 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>，<code class="language-plaintext highlighter-rouge">USER.md</code> 主要由显式用户模型维护路径更新。</p>
+
+<p>这样做有三个理由：</p>
+
+<ol>
+  <li>回复路径强调低延迟，memory curation 需要跨多次观察判断“是否真的耐久”；</li>
+  <li>同一事实被多次召回、跨天出现，比一次自信的模型判断更适合作为晋升信号；</li>
+  <li>consolidation 可以集中做去重、覆盖旧版本、控制 bootstrap budget 和写入并发。</li>
+</ol>
+
+<h4 id="实现机制代码怎样把-memory-接入-agent-loop">实现机制：代码怎样把 Memory 接入 agent loop</h4>
+
+<p><code class="language-plaintext highlighter-rouge">memory-core</code> 是一个 plugin，而不是散落在 system prompt 中的一组约定。入口文件在 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/index.ts#L297-L335"><code class="language-plaintext highlighter-rouge">extensions/memory-core/index.ts</code></a>，注册了四类 runtime surface：</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">registerMemoryCapability(...)</code>：向 host 提供 bootstrap prompt section、pre-compaction flush plan 和 memory runtime；</li>
+  <li><code class="language-plaintext highlighter-rouge">memory_search</code>：延迟加载搜索实现，输入 query、结果数、最低分和 corpus；</li>
+  <li><code class="language-plaintext highlighter-rouge">memory_get</code>：按 path 和 line range 有界读取原文；</li>
+  <li><code class="language-plaintext highlighter-rouge">intent</code> 与 lifecycle hooks：处理 prospective memory、Dreaming 调度和 prompt-build 阶段的召回。</li>
+</ol>
+
+<p>Builtin backend 的实现分散在 <a href="https://github.com/openclaw/openclaw/tree/main/extensions/memory-core/src/memory"><code class="language-plaintext highlighter-rouge">extensions/memory-core/src/memory/</code></a>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Markdown files
+  -&gt; watcher / sync controller
+  -&gt; chunk + content hash
+  -&gt; FTS5 rows -------------------------\
+  -&gt; embedding provider -&gt; vector rows ---+-&gt; hybrid ranking
+  -&gt; provenance / time / importance ------/
+  -&gt; memory_search snippet
+  -&gt; memory_get 回读可信原文范围
+</code></pre></div></div>
+
+<p>这里的 manager 被拆成 source sync、embedding cache、FTS state、vector write、search preflight、hybrid/MMR 和 project ranking 等模块。这样 provider 不可用、vector extension 不可用、index identity 失配和 source 文件变化可以分别处理，而不是把所有故障都表现为“搜索为空”。</p>
+
+<p>Dreaming 的 controller 位于 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming.ts"><code class="language-plaintext highlighter-rouge">extensions/memory-core/src/dreaming.ts</code></a>。它维护一个 <code class="language-plaintext highlighter-rouge">delivery: none</code> 的 isolated cron，执行时先运行 phase ingestion，再调用 <code class="language-plaintext highlighter-rouge">rankShortTermPromotionCandidates(...)</code>，最后把通过 gate 的 candidates 交给 <code class="language-plaintext highlighter-rouge">applyShortTermPromotions(...)</code>。代码中的调用顺序可直接查看 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming.ts#L596-L685"><code class="language-plaintext highlighter-rouge">dreaming.ts#L596-L685</code></a>。</p>
+
+<h4 id="到底哪里使用-llm">到底哪里使用 LLM？</h4>
+
+<p>最容易产生的误解是“用了 embedding 就等于用了 LLM”。这里应区分 <strong>embedding model</strong> 和 <strong>生成式 LLM/agent turn</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>环节</th>
+      <th>是否使用生成式 LLM</th>
+      <th>实际机制</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Markdown file watch、chunk、hash、SQLite/FTS 写入</td>
+      <td>否</td>
+      <td>文件系统、token/chunk 代码和数据库事务</td>
+    </tr>
+    <tr>
+      <td>Vector indexing</td>
+      <td>否（但使用 embedding model）</td>
+      <td>文本映射为向量；不生成记忆内容、不决定是否晋升</td>
+    </tr>
+    <tr>
+      <td>BM25/vector merge、recency、importance、MMR、project boost</td>
+      <td>否</td>
+      <td>数学打分与确定性排序</td>
+    </tr>
+    <tr>
+      <td>Trigger recall、strong-hit 判断</td>
+      <td>否</td>
+      <td>lexical/vector prefilter、threshold、最多注入数量和 scope 检查</td>
+    </tr>
+    <tr>
+      <td>Recall-intent 判断</td>
+      <td>默认否</td>
+      <td><a href="https://github.com/openclaw/openclaw/blob/main/extensions/active-memory/escalation.ts#L1-L66"><code class="language-plaintext highlighter-rouge">active-memory/escalation.ts</code></a> 使用多语言 regex，结合“Lane 1 是否已有强命中”决定是否升级</td>
+    </tr>
+    <tr>
+      <td>普通回复中按用户要求“记住”</td>
+      <td>是</td>
+      <td>当前主 agent LLM 理解自然语言并选择写哪个 Markdown surface；实际文件写入仍受工具和权限约束</td>
+    </tr>
+    <tr>
+      <td>Pre-compaction memory flush</td>
+      <td>是</td>
+      <td>compaction 前运行一次 silent housekeeping agent turn，让模型抽取尚未落盘的重要事实；它可能漏写</td>
+    </tr>
+    <tr>
+      <td>Active Memory deep recall</td>
+      <td><strong>是</strong></td>
+      <td>在 <code class="language-plaintext highlighter-rouge">before_prompt_build</code> 中启动一个 blocking embedded agent，只允许 memory tools；它搜索、读取并把证据压成短 summary</td>
+    </tr>
+    <tr>
+      <td>Dreaming Light/REM 的候选整理与 phase signal</td>
+      <td>核心筛选主要是确定性代码</td>
+      <td>读取 daily/transcript、去重、相似度、时间窗口和 reinforcement；可另启 narrative sub-agent 写人类可读 Diary</td>
+    </tr>
+    <tr>
+      <td>Dreaming Deep candidate ranking 与 provenance gate</td>
+      <td><strong>否</strong></td>
+      <td>六项加权评分、<code class="language-plaintext highlighter-rouge">minScore/minRecallCount/minUniqueQueries</code>、origin allowlist 和 live-snippet rehydrate</td>
+    </tr>
+    <tr>
+      <td>Deep consolidation rewrite</td>
+      <td><strong>是</strong></td>
+      <td>有界 sub-agent 根据合格 candidates + 当前 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 合并、去重、supersede；随后代码验证结构、引用、预算和旧条目损失率</td>
+    </tr>
+    <tr>
+      <td>Dream Diary narrative</td>
+      <td><strong>是，但非事实写入</strong></td>
+      <td>后台 sub-agent 把 fragments/themes/promotions 写成人类可读叙事；失败可写 fallback entry，Diary 永不作为 promotion source</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Active Memory 的真实 LLM 调用可以在 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/active-memory/recall-run.ts#L246-L313"><code class="language-plaintext highlighter-rouge">extensions/active-memory/recall-run.ts#L246-L313</code></a> 看到：代码先构建 recall prompt，再调用 <code class="language-plaintext highlighter-rouge">runEmbeddedAgent(...)</code>，传入 model、timeout、<code class="language-plaintext highlighter-rouge">toolsAllow</code>、<code class="language-plaintext highlighter-rouge">disableMessageTool: true</code> 和 lightweight context。它不是让主回复模型凭空“回忆”，而是先运行一个隔离的、只读 memory researcher：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>before_prompt_build
+  -&gt; eligibility / private scope / timeout（code）
+  -&gt; Lane 1 trigger recall（code + embedding，可无生成式 LLM）
+  -&gt; recall intent + no strong hit（regex/code）
+  -&gt; runEmbeddedAgent（生成式 LLM）
+       -&gt; memory_search / memory_get only
+       -&gt; NONE 或 bounded summary
+  -&gt; summary 作为 hidden untrusted prefix 注入主回复
+  -&gt; 主回复 LLM 使用该补充上下文回答
+</code></pre></div></div>
+
+<p>Dreaming 则可能调用两类不同的生成式 turn：</p>
+
+<ol>
+  <li><strong>Consolidation sub-agent</strong>：负责语言层面的 merge、dedupe、supersede 和紧凑改写；入口实现见 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming-consolidation.ts"><code class="language-plaintext highlighter-rouge">dreaming-consolidation.ts</code></a>。它只接收确定性 gate 已放行的 owner/agent candidates。</li>
+  <li><strong>Narrative sub-agent</strong>：只负责 <code class="language-plaintext highlighter-rouge">DREAMS.md</code> 的可读叙事。源码 <a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming-narrative.ts#L215-L305"><code class="language-plaintext highlighter-rouge">dreaming-narrative.ts#L215-L305</code></a> 会以独立 session/lane 调用 subagent，最多取有界 fragments/themes/promotions，并设置 <code class="language-plaintext highlighter-rouge">deliver: false</code>。</li>
+</ol>
+
+<p>因此可以把 LLM 的权限边界概括为：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LLM 可以：理解、摘要、合并、发现语言上的重复或过时关系
+LLM 不可以：伪造 provenance、绕过 threshold、扩大 scope、跳过预算校验、直接认定 rewrite 安全
+</code></pre></div></div>
+
+<p>这正是 OpenClaw Memory 实现区别于“每轮让模型自己决定记住什么”的核心：<strong>模型负责语义判断，代码负责资格、边界、时序和 commit</strong>。</p>
+
+<h4 id="dreaming-到底读什么写什么">Dreaming 到底读什么、写什么</h4>
+
+<p>Dreaming 可读取 short-term recall state、daily notes，以及经过脱敏的 eligible session transcript。只有交互式 session 可以进入 transcript ingestion；cron、heartbeat、sub-agent 和 unknown session 不生成 durable candidate。系统还会移除 runtime 标记的 recalled context，避免“旧 memory 被注入 → transcript 又学一次 → 频率虚增”的自我强化环。</p>
+
+<p>它写入三个不同用途的表面：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>表面</th>
+      <th>内容</th>
+      <th>是否会成为长期事实</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">memory/.dreams/</code></td>
+      <td>recall store、phase signals、ingestion checkpoint、lock 等机器状态</td>
+      <td>只是候选和信号，不直接等于长期 memory</td>
+    </tr>
+    <tr>
+      <td>SQLite-backed pre-image state</td>
+      <td>每次接受 rewrite 前的旧 <code class="language-plaintext highlighter-rouge">MEMORY.md</code></td>
+      <td>用于审计和恢复，不注入模型</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DREAMS.md</code> 与可选 <code class="language-plaintext highlighter-rouge">memory/dreaming/&lt;phase&gt;/YYYY-MM-DD.md</code></td>
+      <td>Light/REM/Deep 摘要、Diary、added/merged/superseded 计数和 diff highlights</td>
+      <td>仅供人类审阅，明确排除在 promotion source 之外</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MEMORY.md</code></td>
+      <td>Deep phase 最终通过验证的 durable entries</td>
+      <td>是；这是 long-term promotion 的唯一最终写入面</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="lightremdeep-三阶段">Light、REM、Deep 三阶段</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>阶段</th>
+      <th>做什么</th>
+      <th>为什么不能直接写 <code class="language-plaintext highlighter-rouge">MEMORY.md</code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Light</strong></td>
+      <td>读取近期 short-term signals、daily notes 和可用的 redacted transcript；去重并暂存 candidate lines；记录 reinforcement</td>
+      <td>一次出现可能只是噪声，先整理证据而不做永久承诺</td>
+    </tr>
+    <tr>
+      <td><strong>REM</strong></td>
+      <td>从近期 traces 中形成主题与反思摘要，识别 recurring idea；给 deep ranking 增加小幅、随时间衰减的 phase boost</td>
+      <td>主题总结是模型解释，不应未经 provenance/gate 就成为事实</td>
+    </tr>
+    <tr>
+      <td><strong>Deep</strong></td>
+      <td>重新从 live daily file 读取 snippet，跳过已删除或变更的旧引用；计算分数并检查所有 threshold；只把合格候选交给 consolidation sub-agent</td>
+      <td>只有这一阶段既检查资格又验证最终 rewrite，才允许落入 curated core</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>“重新从 live file 读取”很重要：候选 store 中记着某段旧 snippet，不代表它现在仍有效。如果人类已删除或修正 daily note，Deep 不能拿缓存旧文本继续晋升。</p>
+
+<h4 id="deep-ranking什么样的信息会毕业">Deep ranking：什么样的信息会“毕业”</h4>
+
+<p>当前官方文档列出六个基础信号，外加 Light/REM reinforcement：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>信号</th>
+      <th style="text-align: right">权重</th>
+      <th>直觉</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Relevance</td>
+      <td style="text-align: right">0.30</td>
+      <td>这条内容被检索出来时，与真实 query 有多相关</td>
+    </tr>
+    <tr>
+      <td>Frequency</td>
+      <td style="text-align: right">0.24</td>
+      <td>它积累了多少次 short-term signal</td>
+    </tr>
+    <tr>
+      <td>Query diversity</td>
+      <td style="text-align: right">0.15</td>
+      <td>是否在不同 query/日期语境中都有用，而不是同一句话重复刷分</td>
+    </tr>
+    <tr>
+      <td>Recency</td>
+      <td style="text-align: right">0.15</td>
+      <td>最近是否仍然活跃，按时间衰减</td>
+    </tr>
+    <tr>
+      <td>Consolidation</td>
+      <td style="text-align: right">0.10</td>
+      <td>是否跨多天重复出现</td>
+    </tr>
+    <tr>
+      <td>Conceptual richness</td>
+      <td style="text-align: right">0.06</td>
+      <td>snippet/path 中是否包含足够概念信息，而不是空泛句子</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>可把基础分数近似写成：</p>
+
+\[S = 0.30R + 0.24F + 0.15D + 0.15T + 0.10C + 0.06K + B_{light/rem}\]
+
+<p>但 <strong>总分过线仍不够</strong>。<code class="language-plaintext highlighter-rouge">minScore</code>、<code class="language-plaintext highlighter-rouge">minRecallCount</code>、<code class="language-plaintext highlighter-rouge">minUniqueQueries</code> 必须同时通过；而 <code class="language-plaintext highlighter-rouge">untrusted</code>、<code class="language-plaintext highlighter-rouge">system</code> provenance 是资格否决，不是扣几分。换言之，恶意网页被搜索一百次也不能因此晋升。</p>
+
+<h4 id="consolidation-model-能做什么不能做什么">Consolidation model 能做什么，不能做什么</h4>
+
+<p>确定性 gate 之后，模型拿到：合格的 owner/agent candidates、来源/观察时间/session kind/supersession key、daily-note 行号引用，以及当前 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>。它可以：</p>
+
+<ul>
+  <li>合并重复事实；</li>
+  <li>用 supersession key 淘汰过时版本；</li>
+  <li>把长 observation 压成紧凑 durable statement；</li>
+  <li>为新条目保留 <code class="language-plaintext highlighter-rouge">Source: path#Lx-Ly</code>；</li>
+  <li>添加最多三个 trigger concepts 和 <code class="language-plaintext highlighter-rouge">1..10</code> importance annotation。</li>
+</ul>
+
+<p>一个 accepted rewrite 必须同时满足：结构可解析、每个 promoted candidate 都有 source reference、文件仍在 bootstrap-safe budget 内、丢失的旧条目比例不超过 <code class="language-plaintext highlighter-rouge">phases.deep.maxPriorEntryLossFraction</code>（当前默认 <code class="language-plaintext highlighter-rouge">0.25</code>）。每条 promoted snippet 默认最多约 <code class="language-plaintext highlighter-rouge">160</code> estimated tokens。</p>
+
+<p>写回前还会重新比较开始 consolidation 时记录的 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> content hash，并通过 atomic rename 替换。若人类编辑器或另一 session 已修改文件，rewrite 被放弃；模型不可覆盖并发的新内容。模型不可用、结构验证失败或 rewrite 不安全时，本轮退回 append-only promotion，而不是阻塞用户回复。</p>
+
+<h4 id="dream-diary-不是梦里的事实库">Dream Diary 不是“梦里的事实库”</h4>
+
+<p>每个 phase 有足够材料后，<code class="language-plaintext highlighter-rouge">memory-core</code> 可以运行 best-effort background sub-agent，向 <code class="language-plaintext highlighter-rouge">DREAMS.md</code> 追加一段便于人阅读的 narrative。默认使用 runtime model；配置 <code class="language-plaintext highlighter-rouge">dreaming.model</code> 时需要允许 model override，并可用 allowlist 限制。配置模型不可用时只对 model-unavailable 错误回退一次；trust/allowlist 失败不会静默绕过。</p>
+
+<p>Diary 的定位是 <strong>解释与审阅</strong>：它告诉你系统看到了哪些主题、Deep 增加/合并/覆盖了什么。它本身不参与下一轮晋升，也不会因为写得像事实就进入 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>。这条单向边界防止模型对自己生成的反思反复引用并放大。</p>
+
+<h4 id="调度手动预览与历史-backfill">调度、手动预览与历史 backfill</h4>
+
+<p>当前滚动文档中 Dreaming 默认开启，<code class="language-plaintext highlighter-rouge">memory-core</code> 自动维护一个去重的 recurring cron，默认 <code class="language-plaintext highlighter-rouge">0 3 * * *</code>。可以用以下入口观察而不是盲信后台模型：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>/dreaming status
+/dreaming on
+/dreaming off
+
+openclaw memory status <span class="nt">--deep</span>
+openclaw memory promote                 <span class="c"># 预览候选</span>
+openclaw memory promote <span class="nt">--apply</span>         <span class="c"># 明确应用</span>
+openclaw memory promote-explain <span class="s2">"router vlan"</span>
+openclaw memory rem-harness             <span class="c"># 无写入预览 REM/Deep 结果</span>
+</code></pre></div></div>
+
+<p>历史 daily notes 可通过 grounded backfill 进入审阅流程：<code class="language-plaintext highlighter-rouge">rem-backfill</code> 先把可追溯的结果写入 <code class="language-plaintext highlighter-rouge">DREAMS.md</code>；只有带 <code class="language-plaintext highlighter-rouge">--stage-short-term</code> 才把候选放入正常 short-term evidence store，而且仍要经过未来的 Deep promotion，绝不会直接写 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>。<code class="language-plaintext highlighter-rouge">--rollback</code> 和 <code class="language-plaintext highlighter-rouge">--rollback-short-term</code> 可移除 backfill 产物。外部 archive file 中自报的 owner 字段不可信，未有认证 provenance contract 时不能进入 short-term staging。</p>
+
+<pre><code class="language-json5">{
+  plugins: {
+    entries: {
+      "memory-core": {
+        config: {
+          dreaming: {
+            enabled: true,
+            timezone: "Asia/Shanghai",
+            frequency: "0 3 * * *"
+          }
+        }
+      }
+    }
+  }
+}
+</code></pre>
+
+<p>这整条流程的核心不是仿生名字，而是 <strong>把高延迟、需要跨时间证据的写入判断从 reply hot path 移到后台，同时让资格、来源、容量、并发和回滚仍由确定性机制控制</strong>（<a href="https://docs.openclaw.ai/concepts/dreaming">Dreaming</a>）。</p>
+
+<h3 id="55-pre-compaction-memory-flush">5.5 Pre-compaction memory flush</h3>
+
+<p>Compaction 会把旧对话压缩成 summary，保留近期 tail；完整 transcript 仍在磁盘，但模型下一轮看到的是压缩后上下文。OpenClaw 在 compaction 前默认运行一个 silent housekeeping turn，提醒 agent 把尚未落盘的重要事实写进 daily memory，之后才摘要（<a href="https://docs.openclaw.ai/concepts/compaction">Compaction</a>）。</p>
+
+<p>这解决的是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>对话中的重要事实
+  --若直接 compaction--&gt; 可能只剩有损摘要
+  --先 flush--&gt; daily note 成为可搜索、可晋升的独立证据
+</code></pre></div></div>
+
+<p>但它不是严格事务：flush turn 仍依赖模型识别重要信息，可能漏写；因此不能把它当数据库 commit，也不能用它替代显式任务状态、测试结果或外部 system of record。</p>
+
+<h3 id="56-provenance-与防-memory-poisoning">5.6 Provenance 与防 memory poisoning</h3>
+
+<p>索引中的 origin class 是封闭集合，并存在 SQLite 字段中，而不是从 Markdown 文本解析：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Origin</th>
+      <th>含义</th>
+      <th>能否晋升 curated core</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">owner</code></td>
+      <td>可信 channel 中由 owner 提供</td>
+      <td>可以，通过其他 gate 后晋升</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">agent</code></td>
+      <td>agent 从 owner 内容中推导</td>
+      <td>可以，通过其他 gate 后晋升</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">untrusted</code></td>
+      <td>网页、tool output、非 owner 群成员等外部内容</td>
+      <td>不可以，结构性排除</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">system</code></td>
+      <td>heartbeat、cron preamble 等脚手架</td>
+      <td>不可以，结构性排除</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>此外还有两条关键卫生规则：</p>
+
+<ul>
+  <li>cron、heartbeat、sub-agent session 不生成可晋升的 durable candidate，避免把周期性脚手架写成“事实”；</li>
+  <li>已经从 memory 注入的内容带结构标记，不会再次被抽取成新 memory，避免“召回 100 次就复制成 100 条”的反馈环。</li>
+</ul>
+
+<p>限制也必须写清：当前文档承认 owner turn 内部尚未完整传播 content-origin taint。也就是说，如果 owner 要 agent 浏览一个恶意网页，assistant 对网页的转述可能继承 turn sender 的信任等级。这是当前安全模型的明确缺口，而不是 provenance 已经彻底解决所有污染。</p>
+
+<h3 id="57-召回路径一零额外模型调用的确定性-lane">5.7 召回路径一：零额外模型调用的确定性 lane</h3>
+
+<p><code class="language-plaintext highlighter-rouge">memory_search</code> 的基础检索由两路并行完成：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>query -&gt; embedding -&gt; vector similarity --\
+                                           weighted merge -&gt; ranking
+query -&gt; tokenize  -&gt; BM25 keyword -------/
+</code></pre></div></div>
+
+<p>最终近似为：</p>
+
+\[\text{score}
+= \text{hybrid relevance}
+\times \text{recency decay}
+\times \text{importance multiplier}\]
+
+<p>daily note 默认按 30 天半衰期衰减，<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 与 <code class="language-plaintext highlighter-rouge">USER.md</code> 等 curated files 视为 evergreen。向量路径适合“gateway host”与“运行 OpenClaw 的机器”这类语义近似，BM25 适合错误码、ID 和 config key；没有 embedding provider 时可显式使用 FTS-only。当前文档列出的 provider 包括 OpenAI、Gemini、Voyage、Mistral、Bedrock、DeepInfra、本地 GGUF、Ollama、LM Studio、GitHub Copilot 和 OpenAI-compatible endpoint（<a href="https://docs.openclaw.ai/concepts/memory-search">Memory search</a>）。</p>
+
+<p>除显式 <code class="language-plaintext highlighter-rouge">memory_search</code> 外，可信 curated entry 还可带 trigger 与 importance：</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">-</span> Gateway 只绑定 loopback。 <span class="c">&lt;!-- trigger: gateway setup, network safety --&gt;</span> <span class="c">&lt;!-- importance: 9 --&gt;</span>
+</code></pre></div></div>
+
+<p>每次 inbound message 都做快速 prefilter，强匹配最多注入 3 条隐藏 context。Daily notes、导入 transcript 和普通 session transcript 即使匹配很强，也不会自动进入 ordinary turn；这是安全边界，不只是性能优化。</p>
+
+<h4 id="索引搜索和读取是三个不同动作">索引、搜索和读取是三个不同动作</h4>
+
+<ol>
+  <li><strong>Index</strong>：把 Markdown 切成 overlapping chunks，生成 FTS term index 和可选 embedding，并把来源、时间、importance、trigger、project 等 metadata 写入 SQLite。</li>
+  <li><strong>Search</strong>：<code class="language-plaintext highlighter-rouge">memory_search</code> 返回相关 snippet、分数和 source path；适合“不知道在哪个文件”的问题。</li>
+  <li><strong>Get</strong>：<code class="language-plaintext highlighter-rouge">memory_get</code> 按已知 path/line range 读取原文；适合 search 命中后核对上下文，避免只凭截断 snippet 下结论。</li>
+</ol>
+
+<p>索引是可重建的派生数据，不是 source of truth。Embedding cache 默认开启，避免文件未变化时重复付费；SQLite WAL 会在周期和 shutdown 时 checkpoint。若 <code class="language-plaintext highlighter-rouge">sqlite-vec</code> 不可用，builtin backend 可退到进程内 cosine similarity，但 embedding provider 不可用与 vector extension 不可用是两种不同故障，<code class="language-plaintext highlighter-rouge">memory status --deep</code> 会分别报告。</p>
+
+<h4 id="provider-失败语义">Provider 失败语义</h4>
+
+<ul>
+  <li>未配置 provider、旧的 <code class="language-plaintext highlighter-rouge">auto</code>，或显式 <code class="language-plaintext highlighter-rouge">provider: "none"</code> 时，可以运行 FTS-only lexical recall。</li>
+  <li>显式指定远程 provider 后，如果认证、网络或 endpoint 在运行时失败，当前文档要求返回 unavailable，而不是悄悄改用关键词结果；这样错误配置不会伪装成“搜索质量突然变差”。</li>
+  <li>切换 provider、model、embedding dimensions、input type、chunking 或 sources 会改变 index identity。系统会暂停不兼容的 vector search，直到用户运行 <code class="language-plaintext highlighter-rouge">openclaw memory status --index --agent &lt;id&gt;</code> 或 <code class="language-plaintext highlighter-rouge">openclaw memory index --force --agent &lt;id&gt;</code>。</li>
+  <li>Codex OAuth 只覆盖 chat/completion，不自动提供 embedding 权限；使用 OpenAI embedding 仍需要对应 API key，或改用 local/Ollama/其他 provider。</li>
+</ul>
+
+<h4 id="recencymmr-与多模态的边界">Recency、MMR 与多模态的边界</h4>
+
+<p>Builtin ranking 支持 semantic + lexical hybrid、importance 和 dated-note recency。30 天半衰期意味着一条 dated note 过 30 天后，recency 部分只剩一半；<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 和非 dated curated files 视为 evergreen。MMR 用于减少多个 near-duplicate hit，但是否启用以及具体 tuning 应以当前 config reference 为准。</p>
+
+<p>使用 <code class="language-plaintext highlighter-rouge">gemini-embedding-2-preview</code> 时，可以索引 <code class="language-plaintext highlighter-rouge">memory.search.extraPaths</code> 下的图片和音频；默认 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>/<code class="language-plaintext highlighter-rouge">memory/*.md</code> 仍是 Markdown-only，query 仍是文本。这是“给外部知识路径加多模态检索”，不是把任意聊天附件自动变成长期记忆。</p>
+
+<h3 id="58-召回路径二active-memory-deep-recall-sub-agent">5.8 召回路径二：Active Memory deep-recall sub-agent</h3>
+
+<p>普通 flat retrieval 擅长直接事实，不擅长“我们上个月为何放弃方案 A？”这类跨 session、时间关系或 multi-hop 问题。<strong>7.2 预览/当前文档</strong> 的 Active Memory 增加一个阻塞式、工具受限的 memory sub-agent：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>用户消息
+  -&gt; deterministic trusted trigger
+      -&gt; 强命中：注入有限 context
+      -&gt; 弱/无命中：检测 recall intent
+          -&gt; 无 recall intent：直接主回复
+          -&gt; 有 recall intent：deep-recall sub-agent
+              -&gt; NONE：直接主回复
+              -&gt; compact summary：注入后主回复
+</code></pre></div></div>
+
+<p>默认 <code class="language-plaintext highlighter-rouge">mode: "escalate"</code> 只在“用户明显问过去 + 快速 lane 没有强命中”时运行，而不是每轮都多花一次模型调用。Sub-agent 默认只能调用 <code class="language-plaintext highlighter-rouge">memory_search</code>/<code class="language-plaintext highlighter-rouge">memory_get</code>（LanceDB 时为 <code class="language-plaintext highlighter-rouge">memory_recall</code>），不能调用 shell、web、message 等普通工具；有 timeout、summary 长度、cache 与 circuit breaker。失败、超时或空结果都让主回复继续，而不是吞掉 turn（<a href="https://docs.openclaw.ai/concepts/active-memory">Active Memory</a>）。</p>
+
+<p>个人安装还可启用 <code class="language-plaintext highlighter-rouge">rememberAcrossConversations</code>。其边界是：</p>
+
+<ul>
+  <li>同一 agent 的 private direct / persistent explicit UI conversation 可互相召回；</li>
+  <li>group 和 channel 既不作为来源，也不作为目的；</li>
+  <li>其他 agent 的 transcript 永不进入；</li>
+  <li>metadata 不足的未知/归档 transcript 被拒绝；</li>
+  <li>不改变 session key、delivery route 或 session tool 权限。</li>
+</ul>
+
+<p>这个“默认 fail narrow”的设计比把所有历史对话统一塞进向量库更安全，也更容易解释为何某条记忆可见。</p>
+
+<h4 id="active-memory-的运行资格与延迟成本">Active Memory 的运行资格与延迟成本</h4>
+
+<p>Active Memory 只面向 user-facing、interactive、persistent conversation。Headless one-shot、heartbeat、background run、sub-agent/internal helper 和普通 <code class="language-plaintext highlighter-rouge">agent-command</code> path 不运行它。它有两条 targeting 路径：</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">memory.search.rememberAcrossConversations</code>：个人 agent 的推荐入口，只允许同一 agent 的识别过的私有 conversation；当前 conversation 被排除。</li>
+  <li><code class="language-plaintext highlighter-rouge">plugins.entries.active-memory.config.agents</code>：高级入口，再由 <code class="language-plaintext highlighter-rouge">allowedChatTypes</code>、<code class="language-plaintext highlighter-rouge">allowedChatIds</code>、<code class="language-plaintext highlighter-rouge">deniedChatIds</code> 缩小范围；它不能把产品级 private-only recall 扩大到 group。</li>
+</ol>
+
+<p>默认 <code class="language-plaintext highlighter-rouge">mode: "escalate"</code>；<code class="language-plaintext highlighter-rouge">always</code> 会在每个 eligible turn 都运行 blocking recall，延迟与成本更高；<code class="language-plaintext highlighter-rouge">off</code> 关闭 deep lane 但不卸载 plugin。Session 可用 <code class="language-plaintext highlighter-rouge">/active-memory off|on|status</code> 临时暂停；global form 需要 owner 或 <code class="language-plaintext highlighter-rouge">operator.admin</code>。</p>
+
+<pre><code class="language-json5">{
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          mode: "escalate",
+          agents: ["main"],
+          allowedChatTypes: ["direct"],
+          timeoutMs: 15000,
+          maxSummaryChars: 220,
+          persistTranscripts: false,
+          toolsAllow: ["memory_search", "memory_get"]
+        }
+      }
+    }
+  }
+}
+</code></pre>
+
+<p><code class="language-plaintext highlighter-rouge">toolsAllow</code> 只接受具体 memory tool 名；wildcard、<code class="language-plaintext highlighter-rouge">group:*</code>、<code class="language-plaintext highlighter-rouge">read</code>、<code class="language-plaintext highlighter-rouge">exec</code>、<code class="language-plaintext highlighter-rouge">message</code>、<code class="language-plaintext highlighter-rouge">web_search</code> 等会被过滤。没有可用 recall tool、sub-agent 返回 <code class="language-plaintext highlighter-rouge">NONE</code>、超时或失败时，主回复照常继续。若开启 <code class="language-plaintext highlighter-rouge">persistTranscripts</code>，隐藏 recall run 会写到 <code class="language-plaintext highlighter-rouge">agents/&lt;agent&gt;/sessions/active-memory/*.jsonl</code>；这包含隐藏 prompt 和召回内容，默认关闭是更安全的选择。</p>
+
+<p>调试时可开 <code class="language-plaintext highlighter-rouge">/verbose on</code> 查看 status/elapsed/query/summary length，开 <code class="language-plaintext highlighter-rouge">/trace on</code> 查看简短 debug summary。第一次 Gateway restart 后可能因为模型与 embedding index 冷启动而超时；这时应检查 setup grace、provider health 和 index status，而不是直接把模式改成 <code class="language-plaintext highlighter-rouge">always</code>。</p>
+
+<h3 id="59-project-scoped-memory">5.9 Project-scoped memory</h3>
+
+<p>当前文档还给 coding 场景增加了 repository identity：Git remote <code class="language-plaintext highlighter-rouge">origin</code> 归一化为项目 key，没有 remote 时使用绝对 root。Repository-specific memory 带 project annotation；检索时当前/近期活跃 repo 获得 boost，其他 repo 略降权，trigger injection 则要求项目 key 匹配。</p>
+
+<p>它解决一个真实问题：在仓库 A 学到“发布必须运行内部脚本”不应自动影响仓库 B。与完全分库相比，这种设计仍保留全局用户偏好，同时把项目身份作为确定性 ranking/eligibility 信号。</p>
+
+<h3 id="510-prospective-memory不要把提醒写成一句事实">5.10 Prospective memory：不要把提醒写成一句事实</h3>
+
+<p>“记得我喜欢 TypeScript”是 retrospective memory；“下周五提醒我发布”是 time-triggered action；“下次提到发布时提醒我检查 changelog”是 event-triggered intent。三者不能只写在一个 Markdown 文件里。</p>
+
+<p>最短区分是：<strong>Memory 记住事实，Automation 在时间到达时行动，Intent 在未来事件出现时行动。</strong></p>
+
+<p>OpenClaw 的当前设计是：</p>
+
+<ul>
+  <li>时间触发 → scheduled task/cron；</li>
+  <li>事件触发 → <code class="language-plaintext highlighter-rouge">intent</code> tool 写入 SQLite 状态机，包含关键词、可选 embedding、channel/sender scope、expiry、fire budget 和 cooldown；</li>
+  <li>无法编译的愿望 → Markdown，并带 review date。</li>
+</ul>
+
+<p>Standing intent 有 <code class="language-plaintext highlighter-rouge">pending / armed / fired / done / cancelled / expired</code> 生命周期，默认 cooldown、触发次数预算和过期时间由确定性代码执行。这一点是 OpenClaw 相比许多“把 TODO 写进 memory，然后希望模型以后想起来”的系统更成熟的地方。</p>
+
+<details>
+  <summary><strong>点击展开：Automation 与 Standing Intent 的完整区别</strong></summary>
+
+  <h4 id="automation">1. Automation：由时间触发</h4>
+
+  <p>Automation 也叫 scheduled task，旧界面或命令中常见 cron。它表达的是：</p>
+
+  <blockquote>
+    <p>到达一个确定时间，或者经过一个固定/动态周期后，自动启动任务。</p>
+  </blockquote>
+
+  <p>例如：</p>
+
+  <ul>
+    <li>明天上午 9 点提醒我开会；</li>
+    <li>每周一生成项目周报；</li>
+    <li>每 30 分钟检查服务健康状态；</li>
+    <li>8 月 10 日重新检查 OpenClaw 是否发布新稳定版。</li>
+  </ul>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>时钟或 schedule 条件成立
+  -&gt; scheduler 创建一次 run
+  -&gt; agent 执行检查或操作
+  -&gt; 保存结果或发送通知
+</code></pre></div>  </div>
+
+  <p>它适合“<strong>什么时候做</strong>”已经能够用时间表达的任务。即使这段时间没有任何用户消息，scheduler 仍能唤醒任务。</p>
+
+  <h4 id="standing-intent">2. Standing Intent：由未来消息或事件触发</h4>
+
+  <p>Standing Intent 表达的是：</p>
+
+  <blockquote>
+    <p>当未来对话出现某个话题、发送者、channel 或语义事件时，在那一轮提醒或指导 agent。</p>
+  </blockquote>
+
+  <p>例如：</p>
+
+  <ul>
+    <li>下次讨论发布时，提醒我检查 changelog；</li>
+    <li>Alice 再提到 API migration 时，给出上次的设计结论；</li>
+    <li>有人询问退款时，先提醒我核对订单状态；</li>
+    <li>未来消息提到 OpenClaw 7.2 正式版时，提醒我更新这篇笔记。</li>
+  </ul>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>收到一条新消息
+  -&gt; 确定性 prefilter 检查 armed intents
+  -&gt; 匹配 keyword / embedding / sender / channel scope
+  -&gt; 将命中的 intent 注入当前 turn
+  -&gt; agent 在本轮提醒或执行
+</code></pre></div>  </div>
+
+  <p>如果一直没有相关消息，Intent 就不会触发。它不是后台持续轮询器；需要主动检查外部状态时，应使用 Automation。</p>
+
+  <h4 id="intent-">3. 为什么 Intent 要用状态机</h4>
+
+  <p>一条 Intent 通常不仅有文本，还要保存机器可检查的生命周期：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pending -&gt; armed -&gt; fired -&gt; done
+                  ├-&gt; cancelled
+                  └-&gt; expired
+</code></pre></div>  </div>
+
+  <p>典型字段包括：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>字段</th>
+        <th>作用</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>keywords / trigger embedding</td>
+        <td>定义什么消息可能触发</td>
+      </tr>
+      <tr>
+        <td>channel / sender scope</td>
+        <td>限制在哪个会话、由谁说出时才有效</td>
+      </tr>
+      <tr>
+        <td>expiry</td>
+        <td>过期后不再触发</td>
+      </tr>
+      <tr>
+        <td>fire budget</td>
+        <td>最多允许提醒多少次</td>
+      </tr>
+      <tr>
+        <td>cooldown</td>
+        <td>两次触发至少间隔多久，避免每句话都唠叨</td>
+      </tr>
+      <tr>
+        <td>state</td>
+        <td>区分待激活、已激活、已完成、取消和过期</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>这些字段由确定性代码执行，比让模型每轮从一句自然语言 TODO 中重新猜测是否该行动更可靠。</p>
+
+  <h4 id="section-1">4. 三者怎样选择</h4>
+
+  <table>
+    <thead>
+      <tr>
+        <th>用户表达</th>
+        <th>正确载体</th>
+        <th>原因</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>“我喜欢简洁的中文回答”</td>
+        <td>Memory / <code class="language-plaintext highlighter-rouge">USER.md</code></td>
+        <td>这是稳定偏好</td>
+      </tr>
+      <tr>
+        <td>“明天 9 点提醒我提交报告”</td>
+        <td>Automation</td>
+        <td>触发条件是时间</td>
+      </tr>
+      <tr>
+        <td>“下次聊到数据库迁移时提醒我先备份”</td>
+        <td>Standing Intent</td>
+        <td>触发条件是未来对话事件</td>
+      </tr>
+      <tr>
+        <td>“每小时检查一次数据库是否恢复”</td>
+        <td>Automation</td>
+        <td>需要后台定期主动检查</td>
+      </tr>
+      <tr>
+        <td>“数据库恢复的消息出现时告诉我”</td>
+        <td>Intent，前提是相关消息会进入 OpenClaw</td>
+        <td>依赖收到事件，而不是主动轮询</td>
+      </tr>
+      <tr>
+        <td>“API migration 当前由 Alice 负责”</td>
+        <td>Memory</td>
+        <td>这是当前事实；若责任会变化，应附 observed date/expiry</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="section-2">5. 常见错误</h4>
+
+  <p>把下面一句只写进 <code class="language-plaintext highlighter-rouge">MEMORY.md</code>：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>下周五提醒用户提交报告。
+</code></pre></div>  </div>
+
+  <p>并不能保证周五发生任何事，因为 memory 只是未来可能被读到的上下文，没有时钟触发器。类似地，把“下次讨论发布时提醒检查 changelog”做成每天运行的 cron，会产生无意义轮询。</p>
+
+  <p>一句话记忆：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Memory = 未来需要知道什么
+Automation = 到什么时间要行动
+Intent = 遇到什么事件要行动
+</code></pre></div>  </div>
+
+  <p>版本注意：Standing Intent 属于 OpenClaw 较新的 prospective-memory 方向，具体命令、默认值和是否可用取决于安装版本；它不是普通 Markdown memory 的别名。</p>
+
+</details>
+
+<h3 id="511-backend-与知识层">5.11 Backend 与知识层</h3>
+
+<p>OpenClaw 把 memory provider 做成 plugin slot：</p>
+
+<ul>
+  <li><strong>memory-core / builtin</strong>：SQLite 索引，支持 keyword、vector 和 hybrid search；依赖少，是默认路径。</li>
+  <li><strong>QMD</strong>：本地 sidecar，提供 reranking、query expansion 和索引 workspace 外目录等能力。</li>
+  <li><strong>Honcho</strong>：面向跨 session、user modeling 与 multi-agent awareness 的外部 memory provider。</li>
+  <li><strong>LanceDB plugin</strong>：LanceDB-backed，支持 auto-recall/auto-capture 与本地 Ollama embedding。</li>
+  <li><strong>memory-wiki（当前文档）</strong>：不替换 active memory provider，而是在其旁边编译 provenance-rich wiki，维护 claims、evidence、contradiction、freshness、dashboard 和 lint。</li>
+</ul>
+
+<p>因此，Markdown 是人类可编辑的事实表面，SQLite/vector index 是派生的检索结构，plugin 可以替换检索与 capture 行为，knowledge wiki 则是更高层的整理视图。不要把 index 当 source of truth；损坏时应能从文件重建。</p>
+
+<h4 id="backend-怎么选">Backend 怎么选</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>Backend</th>
+      <th>适合</th>
+      <th>代价/边界</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Builtin <code class="language-plaintext highlighter-rouge">memory-core</code></td>
+      <td>大多数个人安装；希望零额外服务、FTS + vector + hybrid、完整 provenance/Dreaming 集成</td>
+      <td>高级 reranking/query expansion 较少；依赖 embedding provider 才有 semantic lane</td>
+    </tr>
+    <tr>
+      <td>QMD</td>
+      <td>本地优先、需要 reranking、query expansion、额外目录和可选 transcript export</td>
+      <td>多一个 sidecar 与 collection/sync 运维面；<code class="language-plaintext highlighter-rouge">search</code> 是 BM25-only，<code class="language-plaintext highlighter-rouge">vsearch/query</code> 才要求 vector readiness</td>
+    </tr>
+    <tr>
+      <td>Honcho</td>
+      <td>希望自动 user modeling、跨 session 与 multi-agent awareness</td>
+      <td>外部 provider 带来数据边界、可用性和供应商依赖</td>
+    </tr>
+    <tr>
+      <td>LanceDB plugin</td>
+      <td>想要 auto-capture/auto-recall、LanceDB 与 Ollama-compatible embedding</td>
+      <td>Active Memory 工具变为 <code class="language-plaintext highlighter-rouge">memory_recall</code>；不自动获得 builtin 的 protected private transcript authorization</td>
+    </tr>
+    <tr>
+      <td>memory-wiki</td>
+      <td>希望把 durable memory 编译成 claims/evidence/contradiction/freshness 可审计知识库</td>
+      <td>它是旁路知识层，不替换 active memory provider，也不拥有 promotion/Dreaming</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="从-codexclaude-codehermes-导入">从 Codex、Claude Code、Hermes 导入</h4>
+
+<p>Control UI 的 Import Memory 只复制 Markdown，不搬运凭据、配置、skills 或 raw transcript：</p>
+
+<ul>
+  <li>Codex：<code class="language-plaintext highlighter-rouge">~/.codex/memories</code>（或 <code class="language-plaintext highlighter-rouge">CODEX_HOME/memories</code>）中的 consolidated <code class="language-plaintext highlighter-rouge">MEMORY.md</code>、<code class="language-plaintext highlighter-rouge">memory_summary.md</code>；不导入 rollout/transcript。</li>
+  <li>Claude Code：各项目 auto-memory 目录中的 Markdown，以及配置的 <code class="language-plaintext highlighter-rouge">autoMemoryDirectory</code>；不导入 project instructions、session、settings、credentials。</li>
+  <li>Hermes：检测到的 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 与 <code class="language-plaintext highlighter-rouge">USER.md</code>；不导入 config、credentials、skills。</li>
+</ul>
+
+<p>导入结果放在 <code class="language-plaintext highlighter-rouge">memory/imports/&lt;source&gt;/</code>，会被 <code class="language-plaintext highlighter-rouge">memory_search</code>/<code class="language-plaintext highlighter-rouge">memory_get</code> 索引，但<strong>不会合并进 bootstrap <code class="language-plaintext highlighter-rouge">MEMORY.md</code></strong>。源文件保持不变；发生 destination conflict 时先 preview，选择 replace 会创建 verified pre-import backup，并在 migration report 中保留被覆盖文件的 item-level copy。这个设计让“可搜索导入资料”和“已审阅的常驻核心”保持分离。</p>
+
+<h4 id="最小运维手册">最小运维手册</h4>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 快速查看所有 agent 的索引状态</span>
+openclaw memory status
+
+<span class="c"># 连 provider/vector readiness 一起探测；会有额外 provider 调用</span>
+openclaw memory status <span class="nt">--deep</span> <span class="nt">--agent</span> main
+
+<span class="c"># 索引 dirty 时重建，或强制完整重建</span>
+openclaw memory status <span class="nt">--index</span> <span class="nt">--agent</span> main
+openclaw memory index <span class="nt">--force</span> <span class="nt">--agent</span> main
+
+<span class="c"># 从 CLI 搜索并检查结构化结果</span>
+openclaw memory search <span class="s2">"gateway network safety"</span> <span class="nt">--agent</span> main <span class="nt">--json</span>
+
+<span class="c"># 修 stale recall lock 和 promotion metadata</span>
+openclaw memory status <span class="nt">--fix</span> <span class="nt">--agent</span> main
+</code></pre></div></div>
+
+<p>常见诊断顺序是：先确认文件确实存在且没有超出/被截断的 bootstrap budget，再看 sources/scope，然后看 FTS、embedding provider 和 vector store，最后才调 <code class="language-plaintext highlighter-rouge">minScore</code>、结果数量或 reranking。召回为空经常是 source 或权限边界问题，不一定是 embedding model 不够好。</p>
+
+<h2 id="6-一个具体例子一条偏好如何成为长期记忆">6. 一个具体例子：一条偏好如何成为长期记忆</h2>
+
+<p>假设用户在 Telegram 私聊中说：“以后这个项目的周报都用中文，先给结论，再给风险。”</p>
+
+<ol>
+  <li><strong>当前 turn</strong>：消息按 sender/channel 映射到 agent 与 private session。</li>
+  <li><strong>即时行为</strong>：模型在当前回复中遵循要求；若用户显式说“记住”，agent 可直接写入合适的 memory 表面。</li>
+  <li><strong>Episodic capture</strong>：观察进入当天 daily note 或 session transcript，并带 <code class="language-plaintext highlighter-rouge">owner</code> provenance、时间和 project key。</li>
+  <li><strong>Pre-compaction flush</strong>：如果长会话即将 compact，但这条偏好尚未落盘，silent flush turn 尝试写入 daily note。</li>
+  <li><strong>Dreaming gate（7.2 预览/当前文档）</strong>：若该偏好跨多次周报被使用或多天重现，候选通过 recall frequency、query diversity 等 gate。</li>
+  <li><strong>Consolidation</strong>：把偏好写成 <code class="language-plaintext highlighter-rouge">USER.md</code> directive；如果原来是“周报用英文”，旧条目被 supersede，而不是保留冲突的 active version。</li>
+  <li><strong>未来 session</strong>：<code class="language-plaintext highlighter-rouge">USER.md</code> 按独立小预算进入 bootstrap；“帮我写这周周报”还可能命中 trigger，相关 directive 被靠近 query 再注入。</li>
+  <li><strong>安全边界</strong>：若句子来自群聊陌生人或网页，而非 owner，它最多留在可搜索 episodic tier，不得晋升 curated core。</li>
+</ol>
+
+<p>这个流程说明，memory quality 主要不是 embedding model 的问题，而是 <strong>写到哪、谁说的、何时生效、怎样更新旧条目、是否在正确 scope 召回</strong>。</p>
+
+<h2 id="7-与其他-harness-的区别">7. 与其他 Harness 的区别</h2>
+
+<h3 id="71-总览矩阵">7.1 总览矩阵</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>系统</th>
+      <th>首要目标</th>
+      <th>常驻 Gateway / 多渠道</th>
+      <th>默认 memory 形态</th>
+      <th>跨 session 召回</th>
+      <th>写入与治理</th>
+      <th>调度/主动性</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>OpenClaw</strong></td>
+      <td>长期在线的个人/多渠道 agent runtime</td>
+      <td>核心能力</td>
+      <td>分层 Markdown + SQLite index + provider plugins</td>
+      <td>核心方向；7.2 预览含私有跨 conversation Active Memory</td>
+      <td>provenance、episodic→curated gate、Dreaming、review surface</td>
+      <td>内建 scheduled tasks、heartbeat、standing intents</td>
+    </tr>
+    <tr>
+      <td><strong>Claude Code</strong></td>
+      <td>代码仓库内的交互式 coding agent</td>
+      <td>不是核心</td>
+      <td><code class="language-plaintext highlighter-rouge">CLAUDE.md</code> + per-repo auto-memory <code class="language-plaintext highlighter-rouge">MEMORY.md</code>/topic files</td>
+      <td>同 repo/worktree 共享 auto memory；主要靠 startup 注入与按需文件读取</td>
+      <td>Claude 自行维护，plain Markdown；没有 OpenClaw 同等的 provenance 晋升流水线</td>
+      <td>有任务/cron 能力，但不是多渠道 Gateway 的中心抽象</td>
+    </tr>
+    <tr>
+      <td><strong>Codex</strong></td>
+      <td>沙箱化 coding agent、thread/turn 与 app-server</td>
+      <td>Codex app 提供任务控制，但不是 OpenClaw 式 channel Gateway</td>
+      <td>instructions、thread rollout/compaction；memory 功能仍快速演进</td>
+      <td>以 task/thread/project 工作流为中心</td>
+      <td>强项是 sandbox、approval、thread protocol 与可恢复任务；长期个人 memory 不是唯一中心</td>
+      <td>适合代码任务调度与并行 agent，不以消息渠道为核心</td>
+    </tr>
+    <tr>
+      <td><strong>OpenCode</strong></td>
+      <td>provider-neutral coding harness</td>
+      <td>否</td>
+      <td>rules/skills、session 与 compaction；不是完整个人 memory pipeline</td>
+      <td>主要围绕 coding session/subagent</td>
+      <td>permission allow/ask/deny、provider-neutral、LSP</td>
+      <td>不以个人 assistant 的 schedule/channel 为核心</td>
+    </tr>
+    <tr>
+      <td><strong>LangGraph</strong></td>
+      <td>构建自定义 stateful agent/workflow 的 SDK/runtime</td>
+      <td>由开发者搭建</td>
+      <td>thread checkpointer + cross-thread BaseStore</td>
+      <td>能做，但 schema、write policy、retrieval 和 tenancy 由应用负责</td>
+      <td>最灵活，也意味着治理责任在开发者</td>
+      <td>graph、pause/resume、durable execution 强；渠道与个人 UX 需自建</td>
+    </tr>
+    <tr>
+      <td><strong>Hermes Agent</strong></td>
+      <td>自成长的本地优先个人 agent</td>
+      <td>有 messaging gateway</td>
+      <td>内建 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> + <code class="language-plaintext highlighter-rouge">USER.md</code>，另可选外部 provider</td>
+      <td>内建 memory 启动注入，provider 可做 prefetch/sync</td>
+      <td>内建文件有硬字符预算、agent add/replace/remove；plugin 生态广</td>
+      <td>支持 gateway、cron，产品定位与 OpenClaw 最接近</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="72-openclaw-vs-claude-code">7.2 OpenClaw vs Claude Code</h3>
+
+<p>Claude Code 的 memory 很适合代码仓库：用户维护 <code class="language-plaintext highlighter-rouge">CLAUDE.md</code>，Claude 自动维护 per-repository memory 目录；<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 前 200 行或 25KB 在每次会话启动时注入，topic files 按需读取，同一个 Git repo 的 worktree 共享 memory。它强调“让 coding agent 记住 build command、debugging insight、架构约定和工作习惯”（<a href="https://code.claude.com/docs/en/memory">Claude Code memory</a>）。</p>
+
+<p>OpenClaw 的差异在于：</p>
+
+<ul>
+  <li>scope 首先是 <strong>人、agent、channel、conversation 和项目</strong>，不只是 repo；</li>
+  <li>daily notes、transcript、curated core、review diary、standing intent 分层更细；</li>
+  <li>有 hybrid retrieval、trigger injection 和 deep-recall sub-agent，而不只依赖 startup index + 普通文件读取；</li>
+  <li>provenance 与 promotion eligibility 是结构化字段，专门防长期 memory poisoning；</li>
+  <li>memory 与 messaging、scheduler、Gateway 身份处于同一运行时。</li>
+</ul>
+
+<p>Claude Code 的优势是 coding 场景更直接：path-scoped rules、repo/worktree scope、终端/代码工具和工程上下文高度一致。若需求是“在一个仓库里持续编码”，Claude Code 的简单 auto-memory 可能更可预测；若需求是“跨 Telegram、Web UI 和多个项目维持一个个人助手”，OpenClaw 的外层架构更合适。</p>
+
+<h3 id="73-openclaw-vs-codex">7.3 OpenClaw vs Codex</h3>
+
+<p>Codex 的核心优势在 sandbox、approval、代码修改、thread/turn/item protocol、rollout、compaction、resume/fork 与多 agent coding workflow。其 app-server 明确暴露 thread 级 compact、archive、resume 等协议；它优化的是“如何安全地完成代码任务”（<a href="https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md">Codex app-server</a>）。</p>
+
+<p>OpenClaw 则优化“一个长期在线的 agent 怎样接收现实世界消息并保持连续性”。两者组合时：</p>
+
+<ul>
+  <li>Codex app-server 拥有内层 agent loop、原生 thread 与 compaction；</li>
+  <li>OpenClaw 拥有 channel delivery、session mapping、外层 Gateway 和 context projection；</li>
+  <li>OpenClaw transcript 是 mirror，不应当被误认为 Codex canonical thread；</li>
+  <li>OpenClaw memory 能给 Codex turn 提供跨会话个人 context，但最终是否可读写还受 Codex sandbox 与 runtime hook 能力约束。</li>
+</ul>
+
+<p>所以它们常是上下层关系：<strong>OpenClaw 负责“何时、从哪、以谁的身份运行”，Codex 负责“在代码环境里怎样执行这一 turn”。</strong></p>
+
+<h3 id="74-openclaw-vs-opencode">7.4 OpenClaw vs OpenCode</h3>
+
+<p>OpenCode 的核心卖点是 provider-neutral、LSP、subagent、rules/skills 与细粒度 <code class="language-plaintext highlighter-rouge">allow / ask / deny</code> permission。它仍然是以项目和终端为中心的 coding harness（<a href="https://opencode.ai/docs/agents">OpenCode agents</a>）。OpenClaw 更重视 daemon、渠道、设备节点、长期 session 和 personal memory。</p>
+
+<p>另一个差异是权限含义：OpenCode 的 tool permission 是调用策略，不自动等于 OS-level sandbox；OpenClaw 也同样不能因为 memory 写了“不要访问某目录”就认为强制隔离已经存在。两者都要求把软指令与硬权限分开，只是 OpenClaw 还要额外处理 channel sender、group/private scope 与远程设备 pairing。</p>
+
+<h3 id="75-openclaw-vs-langgraph">7.5 OpenClaw vs LangGraph</h3>
+
+<p>LangGraph 是构建块而非开箱即用的个人 agent 产品。它明确区分：</p>
+
+<ul>
+  <li>short-term memory：thread state + checkpointer；</li>
+  <li>long-term memory：cross-thread store，可加 semantic search；</li>
+  <li>graph state：由 node、edge 与 reducer 定义；</li>
+  <li>production persistence：Postgres/Redis 等由应用部署与迁移。</li>
+</ul>
+
+<p>这给开发者最高自由度：可以定义严格 JSON schema、事务、tenant partition、事件溯源和领域特定 verifier。代价是 write policy、memory extraction、poisoning defense、channel routing、scheduler、UI 和 operator workflow 都要自己做（<a href="https://langchain-ai.github.io/langgraph/how-tos/persistence/">LangGraph memory</a>）。</p>
+
+<p>OpenClaw 选择 convention over configuration：已有 workspace 文件、默认 index、session 路由、Dreaming、Active Memory 和 UI。要快速得到个人 agent，OpenClaw 更完整；要构建受业务 schema 和数据库事务约束的生产应用，LangGraph 往往更适合作为底层 runtime。</p>
+
+<h3 id="76-openclaw-vs-hermes-agent">7.6 OpenClaw vs Hermes Agent</h3>
+
+<p>Hermes 与 OpenClaw 的定位最接近：两者都有 messaging gateway、local-first 倾向、skills/plugins、cron 和长期个人 memory。Hermes 的内建 memory 是两个有硬字符上限的文件：<code class="language-plaintext highlighter-rouge">MEMORY.md</code> 约 2200 字符、<code class="language-plaintext highlighter-rouge">USER.md</code> 约 1375 字符；session 启动时冻结注入，当前 session 中的写入立即落盘，但要到下一 session 才进入 system prompt。Agent 通过 add/replace/remove 管理条目（<a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/memory.md">Hermes persistent memory</a>）。</p>
+
+<p>Hermes 也有丰富的外部 memory provider plugin，并定义 <code class="language-plaintext highlighter-rouge">prefetch(query)</code>、<code class="language-plaintext highlighter-rouge">sync_turn(...)</code> 等生命周期；但其 built-in 路径更小、更强调 prefix cache 与明确容量。OpenClaw 当前 memory 方向更重：daily/transcript episodic tier、hybrid index、trigger injection、Dreaming consolidation、provenance gate、review diary、project scope 与 prospective intent。</p>
+
+<p>简化地说：</p>
+
+<ul>
+  <li>Hermes built-in memory：<strong>小而固定的 startup snapshot</strong>；</li>
+  <li>OpenClaw current memory architecture：<strong>分层写入 + 检索 + 晋升 + 安全治理的持续系统</strong>。</li>
+</ul>
+
+<h2 id="8-最新-feature-应如何评价">8. 最新 Feature 应如何评价</h2>
+
+<h3 id="81-值得关注的增量">8.1 值得关注的增量</h3>
+
+<ol>
+  <li><strong>Memory 从“文件 + 搜索”升级为“带信任与晋升的 lifecycle”。</strong> 这是质量上最重要的变化。</li>
+  <li><strong>Active Memory 使用升级而非全量 always-on。</strong> 先做零模型调用的 trusted trigger，再只对 recall-intent turn 启动 sub-agent，控制了延迟与误召回。</li>
+  <li><strong>个人安装的私有跨 conversation recall。</strong> 把“我在另一个私聊说过什么”纳入连续性，同时明确排除 group、channel 和其他 agent transcript。</li>
+  <li><strong>Dreaming 把写入判断移出 reply hot path。</strong> 用跨时间的使用信号决定晋升，比每轮都让 agent 猜“这句话重要吗”更稳健。</li>
+  <li><strong>State safety 与 durable delivery。</strong> 7.2 预览的 crash-safe snapshot、quarantine、durable ingress 和 session branching 表明 OpenClaw 正从“功能很多的 bot”向“有恢复语义的 agent runtime”演进。</li>
+  <li><strong>外部 harness 成为一等 runtime。</strong> Native Codex app-server 与 ACP 外部 harness 明确分工，OpenClaw 更像 control plane，而不是强行自己拥有所有 loop。</li>
+</ol>
+
+<h3 id="82-仍然存在的代价与风险">8.2 仍然存在的代价与风险</h3>
+
+<ul>
+  <li><strong>复杂度显著增加。</strong> Files、SQLite、transcript mirror、provider plugin、Dreaming、Active Memory、scheduler 都有独立状态，诊断难度高于单一 CLI。</li>
+  <li><strong>文档与稳定发行存在时间差。</strong> 主线文档描述的 feature 可能只在 beta 或特定 plugin/config 中可用。</li>
+  <li><strong>召回不是正确性证明。</strong> Hybrid search 命中只能说明相似；deep-recall sub-agent 也可能把时间顺序或因果关系总结错。</li>
+  <li><strong>写入仍有模型依赖。</strong> Flush、候选抽取和 consolidation 可能漏掉事实或误归纳；确定性 gate 只能限制范围，不能保证语义正确。</li>
+  <li><strong>owner-turn taint 传播尚不完整。</strong> 外部工具内容可能在 assistant 总结后继承更高信任，这是官方文档明确承认的边界。</li>
+  <li><strong>Memory 会扩大隐私半径。</strong> 跨 conversation recall 让私聊更连贯，也意味着 transcript index 和隐藏 recall context 更敏感；应默认最小 scope，并谨慎开启 transcript export。</li>
+  <li><strong>长期在线放大操作风险。</strong> Gateway 能触达消息、浏览器、文件与设备；memory 不能替代 sandbox、approval、pairing、allowlist 和网络隔离。</li>
+</ul>
+
+<h2 id="9-什么时候应该选-openclaw">9. 什么时候应该选 OpenClaw</h2>
+
+<p>适合：</p>
+
+<ul>
+  <li>想要一个长期在线、能从手机/聊天软件访问的个人 agent；</li>
+  <li>需要 scheduled work、主动通知、跨设备节点或远程浏览器；</li>
+  <li>需要跨 session 的偏好、决定、项目背景与私有 conversation recall；</li>
+  <li>希望用 OpenClaw 作为外层 control plane，同时把 coding turn 交给 Codex/Claude Code/OpenCode；</li>
+  <li>能接受运行 Gateway、配置渠道、维护 memory scope 与安全边界。</li>
+</ul>
+
+<p>不一定适合：</p>
+
+<ul>
+  <li>只想在一个仓库里完成一次代码修改：直接使用 Claude Code、Codex 或 OpenCode 更轻；</li>
+  <li>需要强 schema、事务、一致性和严格 tenant isolation 的业务 agent：优先考虑 LangGraph/自定义 runtime + 数据库；</li>
+  <li>不愿意维护 daemon、plugin、provider 与渠道 credentials；</li>
+  <li>把“能记住”误认为“可以自动授权”：高风险动作仍应独立审批。</li>
+</ul>
+
+<h2 id="10-一个保守的-memory-配置思路">10. 一个保守的 Memory 配置思路</h2>
+
+<p>以下配置表达的是设计思路，字段以当前官方文档为准，使用稳定版前应确认该字段是否已发布：</p>
+
+<pre><code class="language-json5">{
+  agents: {
+    entries: {
+      personal: {
+        memory: {
+          search: {
+            // 仅适合完全私有、可信的个人 agent。
+            rememberAcrossConversations: true,
+          },
+        },
+      },
+    },
+    defaults: {
+      compaction: {
+        memoryFlush: {
+          enabled: true,
+          // 可指定一个便宜的本地模型做 housekeeping。
+          model: "ollama/qwen3:8b",
+        },
+      },
+    },
+  },
+  memory: {
+    search: {
+      provider: "local", // 或显式选择可信的 embedding provider
+    },
+  },
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          enabled: true,
+          mode: "escalate",
+          agents: ["personal"],
+          allowedChatTypes: ["direct"],
+          queryMode: "recent",
+          promptStyle: "balanced",
+          timeoutMs: 15000,
+          maxSummaryChars: 220,
+          persistTranscripts: false,
+        },
+      },
+      "memory-core": {
+        enabled: true,
+        config: {
+          dreaming: {
+            enabled: true,
+          },
+        },
+      },
+    },
+  },
+}
+</code></pre>
+
+<p>保守策略是：</p>
+
+<ul>
+  <li>Active Memory 用 <code class="language-plaintext highlighter-rouge">escalate</code>，不要一开始就 <code class="language-plaintext highlighter-rouge">always</code>；</li>
+  <li>仅允许 direct/private conversation，group/channel 单独白名单；</li>
+  <li>不持久化 blocking sub-agent transcript，除非正在调试；</li>
+  <li>用 <code class="language-plaintext highlighter-rouge">/verbose on</code> 和 <code class="language-plaintext highlighter-rouge">/trace on</code> 观察 recall，但不要长期泄露隐藏 context；</li>
+  <li>定期检查 <code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code>、<code class="language-plaintext highlighter-rouge">DREAMS.md</code> 和 daily notes；</li>
+  <li>用 <code class="language-plaintext highlighter-rouge">openclaw memory status/search/index --force</code> 诊断索引，而不是手改 SQLite；</li>
+  <li>把提醒放进 scheduled task/intent，不要只写 Markdown；</li>
+  <li>把权限放进 approval/sandbox/allowlist，不要只写 memory directive。</li>
+</ul>
+
+<h2 id="11-常见追问">11. 常见追问</h2>
+
+<h3 id="111-openclaw-的-memory-是-rag-吗">11.1 OpenClaw 的 memory 是 RAG 吗？</h3>
+
+<p>部分是，但不止。Hybrid search 属于典型 retrieval；OpenClaw 还定义了 memory 的写入、provenance、tier、promotion、trigger injection、compaction flush、Dreaming、user model、intent 与 review surface。只把它称为 RAG 会漏掉最关键的治理部分。</p>
+
+<h3 id="112-memorymd-是数据库吗">11.2 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 是数据库吗？</h3>
+
+<p>不是。它是人类可读、可编辑的 curated source surface。SQLite 负责派生索引、provenance、session/intent 等结构化状态。需要事务一致性的业务事实仍应放在真正的数据库或 system of record 中。</p>
+
+<h3 id="113-为什么不把所有-transcript-都-embedding-后每轮搜索">11.3 为什么不把所有 transcript 都 embedding 后每轮搜索？</h3>
+
+<p>因为这会增加延迟、误召回、隐私泄露和 poisoning 面。OpenClaw 的当前设计把 auto-injection 限制在 trusted curated core，把 transcript/daily note 放到显式搜索或 escalation lane，并对私有跨 conversation recall 施加固定边界。</p>
+
+<h3 id="114-dreaming-是不是让-agent-在夜里自由改写人格">11.4 Dreaming 是不是让 agent 在夜里自由改写人格？</h3>
+
+<p>不是。官方设计中的 Dreaming 是定时 consolidation pipeline：确定性 gate 先筛候选，模型只在有界输入内合并/去重/覆盖，结果还要校验、并发检查并记录到 <code class="language-plaintext highlighter-rouge">DREAMS.md</code>。不过它仍是模型参与的写入，所以必须可审阅、可回滚，不能当成绝对正确。</p>
+
+<h3 id="115-memoryskills-与-instructions-有什么区别">11.5 Memory、skills 与 instructions 有什么区别？</h3>
+
+<ul>
+  <li>memory：事实、偏好、过去决定；</li>
+  <li>skills：可复用的操作程序；</li>
+  <li>instructions：人类规定的长期行为规则；</li>
+  <li>state/checkpoint：当前任务做到哪；</li>
+  <li>automation/intent：未来何时触发行动。</li>
+</ul>
+
+<p>把所有东西都写进 memory 会造成规则漂移、上下文膨胀和错误触发。</p>
+
+<h3 id="116-openclaw-会取代-claude-codecodex-吗">11.6 OpenClaw 会取代 Claude Code/Codex 吗？</h3>
+
+<p>不必然。OpenClaw 的优势在外层 Gateway 与长期个人 runtime；Claude Code/Codex 的优势在内层 coding loop、工程工具与 sandbox。OpenClaw 官方已经把 Codex app-server 与 ACP external harness 当成 runtime 路径，说明更现实的方向是组合，而不是单一 harness 吞掉所有层。</p>
+
+<h2 id="12-易错点">12. 易错点</h2>
+
+<ol>
+  <li><strong>把最新版文档等同于最新版稳定发行。</strong> 7.2 beta feature 必须单独标注。</li>
+  <li><strong>把 transcript、compaction summary、memory 和 checkpoint 混为一谈。</strong> 它们的生命周期和可靠性不同。</li>
+  <li><strong>认为 embedding 找得到，就等于 memory 写对了。</strong> 错误、过时或越权的事实被高分召回只会更危险。</li>
+  <li><strong>把 <code class="language-plaintext highlighter-rouge">MEMORY.md</code> 当无限日志。</strong> 它应当小而精选，细节进入 daily/topic files。</li>
+  <li><strong>让群聊和私聊共享召回。</strong> 多用户场景必须先设计 DM scope、agent binding 和 channel allowlist。</li>
+  <li><strong>把 memory directive 当硬权限。</strong> “不要执行危险命令”不能替代 sandbox 与 approval。</li>
+  <li><strong>忘记来源与有效期。</strong> 价格、版本、临时授权和待发布决定应记录 observed date、owner、expiry/supersession。</li>
+  <li><strong>为了调试长期保存 Active Memory transcript。</strong> 这些 JSONL 会包含隐藏 prompt 与召回内容，既膨胀又敏感。</li>
+  <li><strong>认为 plugin backend 越复杂越好。</strong> 小规模 memory 先用 builtin；只有明确需要 rerank、外部目录、multi-agent awareness 或专用 capture 时再换 provider。</li>
+</ol>
+
+<h2 id="13-最短总结">13. 最短总结</h2>
+
+<p><strong>OpenClaw 的本质是一个常驻、多渠道、可插拔 runtime 的个人 Agent Gateway。</strong> 它和 Claude Code、Codex、OpenCode 的最大区别，是把 session routing、channel identity、scheduler、设备节点和跨会话 memory 放在中心；它和 LangGraph 的区别，是提供了一套开箱即用的产品约定，而不是让开发者从 graph/state/store 自己搭建。</p>
+
+<p>其 memory system 最值得关注的不是“支持向量搜索”，而是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>可审计 Markdown
+  + SQLite provenance/index
+  + episodic / curated / prospective / review 分层
+  + pre-compaction flush
+  + deterministic trigger recall
+  + Active Memory escalation
+  + Dreaming consolidation
+  + project/private scope
+  + poisoning gate
+</code></pre></div></div>
+
+<p>如果这些机制在 7.2 后稳定下来，OpenClaw 会比多数 coding harness 更接近真正的 <strong>persistent personal agent runtime</strong>。但它也因此更复杂、更需要隐私隔离、写入审计和恢复工程。选择它的理由不应是“想要一个更聪明的模型外壳”，而应是“确实需要一个长期在线、跨渠道、跨会话且可治理的 agent 系统”。</p>
+
+<h2 id="14-主要资料">14. 主要资料</h2>
+
+<ul>
+  <li><a href="https://github.com/openclaw/openclaw/releases">OpenClaw GitHub Releases</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/architecture">Gateway architecture</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/agent-loop">Agent loop</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/agent-runtimes">Agent runtimes</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/memory">Memory overview</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/memory-architecture">Memory architecture</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/memory-builtin">Builtin memory engine</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/memory-search">Memory search</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/active-memory">Active Memory</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/dreaming">Dreaming</a></li>
+  <li><a href="https://docs.openclaw.ai/reference/memory-config">Memory configuration reference</a></li>
+  <li><a href="https://docs.openclaw.ai/cli/memory">Memory CLI</a></li>
+  <li><a href="https://github.com/openclaw/openclaw/tree/main/extensions/memory-core">memory-core implementation</a></li>
+  <li><a href="https://github.com/openclaw/openclaw/tree/main/extensions/active-memory">Active Memory implementation</a></li>
+  <li><a href="https://docs.openclaw.ai/concepts/compaction">Compaction</a></li>
+  <li><a href="https://code.claude.com/docs/en/memory">Claude Code memory</a></li>
+  <li><a href="https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md">Codex app-server protocol</a></li>
+  <li><a href="https://opencode.ai/docs/agents">OpenCode agents and permissions</a></li>
+  <li><a href="https://langchain-ai.github.io/langgraph/how-tos/persistence/">LangGraph memory and persistence</a></li>
+  <li><a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/memory.md">Hermes Agent persistent memory</a></li>
+</ul>
+
+            </div>
+        </article>
+
+        
+        
+        
+        
+    </div>
+
+    <aside class="blog-toc-sidebar">
+        <nav id="blog-toc" class="blog-toc-nav" aria-label="Table of contents">
+            <div class="blog-toc-header">
+                <div class="blog-toc-title">On This Page</div>
+                <button
+                    id="blog-toc-toggle"
+                    class="blog-toc-toggle"
+                    type="button"
+                    aria-controls="blog-toc-list"
+                    aria-expanded="true"
+                    aria-label="收起目录"
+                    title="收起目录"
+                >
+                    <svg class="blog-toc-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="blog-toc-list" class="blog-toc-list"></div>
+        </nav>
+    </aside>
+</div>
+
+    </main>
+    <footer class="footer border-top py-2 mt-5 bg-white small">
+    <div class="container-lg">
+        <div class="row my-3">
+            <div class="col-6">
+                <div class="text-muted">
+                    <i>Last updated: Aug 2026</i>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-right text-muted">
+                    Built with <a href="https://github.com/luost26/academic-homepage" target="_blank"><i class="fas fa-pencil-ruler"></i> academic-homepage</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <pagefind-config
+        bundle-path="/paper-notes/pagefind/"
+        base-url="/paper-notes/"
+        excerpt-length="30"
+        lang="zh-CN"></pagefind-config>
+    <div class="modal fade site-search-modal" id="siteSearchModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="siteSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="siteSearchModalLabel">Search</h2>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pagefind-searchbox placeholder="搜索 wiki、论文笔记、关键词..." show-sub-results="true" hide-shortcut="true"></pagefind-searchbox>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" integrity="sha512-XKa9Hemdy1Ui3KSGgJdgMyYlUg1gM+QhL6cnlyTe2qzMCYm4nAZ1PsVerQzTTXzonUR+dmswHqgJPuwCq1MaAg==" crossorigin="anonymous"></script>
+    <script type="module" src="/paper-notes/pagefind/pagefind-component-ui.js"></script>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tocbot@4.36.8/dist/tocbot.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/anchor-js@5.0.0/anchor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            renderMathInElement(document.body, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '\\[', right: '\\]', display: true},
+                  {left: '$', right: '$', display: false},
+                  {left: '\\(', right: '\\)', display: false}
+              ],
+              throwOnError : false
+            });
+            Prism.highlightAll();
+            
+
+            var siteSearchModal = document.getElementById("siteSearchModal");
+            var siteSearchBox = siteSearchModal ? siteSearchModal.querySelector("pagefind-searchbox") : null;
+            function focusSiteSearch() {
+                window.setTimeout(function() {
+                    if (siteSearchBox && typeof siteSearchBox.focus === "function") {
+                        siteSearchBox.focus();
+                    }
+                }, 80);
+            }
+            if (siteSearchModal && window.jQuery) {
+                window.jQuery(siteSearchModal).on("shown.bs.modal", focusSiteSearch);
+            }
+            document.addEventListener("keydown", function(event) {
+                var key = String(event.key || "").toLowerCase();
+                var isSearchShortcut = key === "k" && (event.metaKey || event.ctrlKey);
+                var isModalOpen = siteSearchModal && siteSearchModal.classList.contains("show");
+                var target = event.target;
+                var isTyping = target && (
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable
+                );
+                if (!isSearchShortcut || (isTyping && isModalOpen) || !siteSearchModal || !window.jQuery) return;
+                event.preventDefault();
+                window.jQuery(siteSearchModal).modal("show");
+            });
+        });
+    </script>
+    
+    <script src="/paper-notes/assets/js/blog.js"></script>
+    
+    <script src="/paper-notes/assets/js/common.js"></script>
+</body>
+</html>

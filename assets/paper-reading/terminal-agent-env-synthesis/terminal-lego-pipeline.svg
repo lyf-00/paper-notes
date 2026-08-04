@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+  <title id="title">Terminal-Lego task synthesis and trajectory collection pipeline</title>
+  <desc id="desc">StackOverflow sources flow through cascaded artifact generation, test review, Docker round-trip verification, and fixed Terminus-2 trajectory collection.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8fc; }
+      .title { font: 700 34px Inter, "Noto Sans SC", sans-serif; fill: #172033; }
+      .sub { font: 400 17px Inter, "Noto Sans SC", sans-serif; fill: #596274; }
+      .head { font: 700 19px Inter, "Noto Sans SC", sans-serif; fill: #172033; }
+      .body { font: 400 15px Inter, "Noto Sans SC", sans-serif; fill: #414b60; }
+      .tag { font: 700 13px Inter, "Noto Sans SC", sans-serif; fill: #fff; }
+      .card { fill: #fff; stroke: #dfe3ee; stroke-width: 2; }
+      .arrow { stroke: #8792a8; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#8792a8"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1440" height="560"/>
+  <text x="68" y="64" class="title">Terminal-Lego：环境生产线之后，再设计可教学的交互</text>
+  <text x="68" y="98" class="sub">task construction 固定可比环境；harness engineering 决定 trajectory 是否暴露 inspect → act → verify</text>
+
+  <g transform="translate(65,145)">
+    <rect class="card" rx="16" width="240" height="230"/>
+    <rect x="18" y="18" width="74" height="26" rx="13" fill="#2f89c9"/>
+    <text x="55" y="36" text-anchor="middle" class="tag">STAGE 1</text>
+    <text x="18" y="76" class="head">真实 issue seed</text>
+    <text x="18" y="108" class="body">StackOverflow accepted answer</text>
+    <text x="18" y="136" class="body">community vote filtering</text>
+    <text x="18" y="164" class="body">90+ domains / 13 categories</text>
+    <text x="18" y="202" class="body">保留真实 failure mode</text>
+  </g>
+
+  <g transform="translate(350,145)">
+    <rect class="card" rx="16" width="300" height="230"/>
+    <rect x="18" y="18" width="74" height="26" rx="13" fill="#6a5de8"/>
+    <text x="55" y="36" text-anchor="middle" class="tag">STAGE 2</text>
+    <text x="18" y="76" class="head">Cascaded artifacts</text>
+    <text x="18" y="108" class="body">instruction → environment files</text>
+    <text x="18" y="136" class="body">→ accepted-answer-grounded solve.sh</text>
+    <text x="18" y="164" class="body">→ difficulty → pytest → Dockerfile</text>
+    <text x="18" y="202" class="body">每一步读取上游 artifact</text>
+  </g>
+
+  <g transform="translate(695,145)">
+    <rect class="card" rx="16" width="290" height="230"/>
+    <rect x="18" y="18" width="98" height="26" rx="13" fill="#e47a33"/>
+    <text x="67" y="36" text-anchor="middle" class="tag">REVIEW LOOP</text>
+    <text x="18" y="76" class="head">Tests 最多修 3 轮</text>
+    <text x="18" y="108" class="body">Python AST syntax check</text>
+    <text x="18" y="136" class="body">independent LLM defect review</text>
+    <text x="18" y="164" class="body">禁止重跑 solve.sh</text>
+    <text x="18" y="202" class="body">偏向 robust state assertions</text>
+  </g>
+
+  <g transform="translate(1030,145)">
+    <rect class="card" rx="16" width="340" height="230"/>
+    <rect x="18" y="18" width="74" height="26" rx="13" fill="#27a45a"/>
+    <text x="55" y="36" text-anchor="middle" class="tag">STAGE 3</text>
+    <text x="18" y="76" class="head">Docker round-trip</text>
+    <text x="18" y="108" class="body">build → run solve.sh → run pytest</text>
+    <text x="18" y="136" class="body">读取 reward.txt，只留 reward &gt; 0</text>
+    <text x="18" y="164" class="body">固定 Terminus-2 + tmux 收 trajectory</text>
+    <text x="18" y="202" class="body">比较 teacher 的 EGS / TOR</text>
+  </g>
+
+  <path class="arrow" d="M306 260 L344 260"/>
+  <path class="arrow" d="M651 260 L689 260"/>
+  <path class="arrow" d="M986 260 L1024 260"/>
+
+  <rect x="65" y="420" width="1305" height="86" rx="16" fill="#172033"/>
+  <text x="90" y="454" style="font:700 18px Inter,'Noto Sans SC',sans-serif;fill:#fff">关键分界：</text>
+  <text x="202" y="454" style="font:400 17px Inter,'Noto Sans SC',sans-serif;fill:#d4d9e5">environment verification 保证“题能跑”；harness-visible observation 保证“过程能教”。</text>
+  <text x="90" y="484" style="font:400 16px Inter,'Noto Sans SC',sans-serif;fill:#bfc7d7">Terminal-Lego 因此把数据质量指标从 pass/fail 扩展到 action 是否有先前 observation 支撑。</text>
+</svg>

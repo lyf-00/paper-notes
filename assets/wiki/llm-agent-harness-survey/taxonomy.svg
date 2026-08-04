@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920" role="img" aria-labelledby="title desc">
+  <title id="title">LLM Agent Harness 组件分类图</title>
+  <desc id="desc">Agent Harness 围绕模型构造循环，由上下文构造器、工具运行时、记忆、状态、验证、安全与可观测性共同组成。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7faff"/>
+      <stop offset="1" stop-color="#edf4ff"/>
+    </linearGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#173f73"/>
+      <stop offset="1" stop-color="#2867a9"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#173f73" flood-opacity=".12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10z" fill="#52789f"/>
+    </marker>
+  </defs>
+  <rect width="1440" height="920" rx="32" fill="url(#bg)"/>
+  <text x="72" y="72" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="38" font-weight="750" fill="#102a43">Agent Harness：把模型能力变成可持续执行的系统</text>
+  <text x="72" y="112" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="20" fill="#486581">核心不是某一个 prompt，而是每一轮“放什么进上下文、允许做什么、如何保存状态、怎样判定完成”的联合策略</text>
+
+  <g filter="url(#shadow)" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif">
+    <rect x="72" y="160" width="1296" height="176" rx="24" fill="#ffffff" stroke="#bdcde0"/>
+    <text x="104" y="202" font-size="17" font-weight="700" fill="#627d98" letter-spacing="1.5">INNER LOOP · 单轮到多轮执行</text>
+
+    <g transform="translate(104 226)">
+      <rect width="176" height="72" rx="16" fill="#e8f1ff" stroke="#93b5dc"/>
+      <text x="88" y="31" text-anchor="middle" font-size="20" font-weight="700" fill="#174f8a">任务 / 目标</text>
+      <text x="88" y="55" text-anchor="middle" font-size="15" fill="#486581">用户意图与约束</text>
+    </g>
+    <g transform="translate(330 226)">
+      <rect width="220" height="72" rx="16" fill="#eef8f2" stroke="#9ac6aa"/>
+      <text x="110" y="31" text-anchor="middle" font-size="20" font-weight="700" fill="#256b42">Context Constructor</text>
+      <text x="110" y="55" text-anchor="middle" font-size="15" fill="#486581">选择 · 检索 · 压缩 · 汇总</text>
+    </g>
+    <g transform="translate(600 214)">
+      <rect width="240" height="96" rx="20" fill="url(#core)"/>
+      <text x="120" y="38" text-anchor="middle" font-size="24" font-weight="750" fill="#ffffff">Model + Agent Loop</text>
+      <text x="120" y="68" text-anchor="middle" font-size="16" fill="#d9e8ff">plan → act → observe → adapt</text>
+    </g>
+    <g transform="translate(890 226)">
+      <rect width="210" height="72" rx="16" fill="#fff6df" stroke="#dfbf68"/>
+      <text x="105" y="31" text-anchor="middle" font-size="20" font-weight="700" fill="#8a5a00">Tool Runtime</text>
+      <text x="105" y="55" text-anchor="middle" font-size="15" fill="#486581">权限 · 调用 · 超时 · 错误</text>
+    </g>
+    <g transform="translate(1150 226)">
+      <rect width="186" height="72" rx="16" fill="#f4efff" stroke="#b7a1da"/>
+      <text x="93" y="31" text-anchor="middle" font-size="20" font-weight="700" fill="#66459a">环境</text>
+      <text x="93" y="55" text-anchor="middle" font-size="15" fill="#486581">Terminal · Browser · API</text>
+    </g>
+  </g>
+
+  <g stroke="#52789f" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M280 262h42"/>
+    <path d="M550 262h42"/>
+    <path d="M840 262h42"/>
+    <path d="M1100 262h42"/>
+    <path d="M1244 310v36H720v-28"/>
+  </g>
+  <text x="982" y="367" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="16" fill="#52789f">observation / feedback 回流下一轮</text>
+
+  <g filter="url(#shadow)" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif">
+    <g transform="translate(72 414)">
+      <rect width="298" height="190" rx="22" fill="#ffffff" stroke="#bdcde0"/>
+      <circle cx="46" cy="46" r="22" fill="#dfeaff"/>
+      <text x="46" y="53" text-anchor="middle" font-size="20" font-weight="700" fill="#245b9b">M</text>
+      <text x="82" y="52" font-size="23" font-weight="750" fill="#102a43">Memory System</text>
+      <text x="28" y="92" font-size="17" fill="#486581">短期：当前上下文与工作草稿</text>
+      <text x="28" y="123" font-size="17" fill="#486581">任务：计划、产物、progress file</text>
+      <text x="28" y="154" font-size="17" fill="#486581">项目/长期：规则、偏好、知识库</text>
+    </g>
+    <g transform="translate(405 414)">
+      <rect width="298" height="190" rx="22" fill="#ffffff" stroke="#bdcde0"/>
+      <circle cx="46" cy="46" r="22" fill="#dff4e5"/>
+      <text x="46" y="53" text-anchor="middle" font-size="20" font-weight="700" fill="#257a3e">S</text>
+      <text x="82" y="52" font-size="23" font-weight="750" fill="#102a43">State &amp; Persistence</text>
+      <text x="28" y="92" font-size="17" fill="#486581">checkpoint · thread · workspace</text>
+      <text x="28" y="123" font-size="17" fill="#486581">event log · trajectory · artifact</text>
+      <text x="28" y="154" font-size="17" fill="#486581">恢复、回滚、并发与交接</text>
+    </g>
+    <g transform="translate(738 414)">
+      <rect width="298" height="190" rx="22" fill="#ffffff" stroke="#bdcde0"/>
+      <circle cx="46" cy="46" r="22" fill="#fff0cc"/>
+      <text x="46" y="53" text-anchor="middle" font-size="20" font-weight="700" fill="#9a6700">V</text>
+      <text x="82" y="52" font-size="23" font-weight="750" fill="#102a43">Verification Loop</text>
+      <text x="28" y="92" font-size="17" fill="#486581">self-check · critic · reviewer</text>
+      <text x="28" y="123" font-size="17" fill="#486581">tests · oracle · reward feedback</text>
+      <text x="28" y="154" font-size="17" fill="#486581">完成条件、预算与停止策略</text>
+    </g>
+    <g transform="translate(1070 414)">
+      <rect width="298" height="190" rx="22" fill="#ffffff" stroke="#bdcde0"/>
+      <circle cx="46" cy="46" r="22" fill="#f4e4ff"/>
+      <text x="46" y="53" text-anchor="middle" font-size="20" font-weight="700" fill="#7650a8">G</text>
+      <text x="82" y="52" font-size="23" font-weight="750" fill="#102a43">Governance</text>
+      <text x="28" y="92" font-size="17" fill="#486581">sandbox · approvals · guardrails</text>
+      <text x="28" y="123" font-size="17" fill="#486581">trace · metrics · human-in-loop</text>
+      <text x="28" y="154" font-size="17" fill="#486581">成本、隐私、安全与审计</text>
+    </g>
+  </g>
+
+  <g font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif">
+    <rect x="72" y="654" width="1296" height="190" rx="24" fill="#102a43"/>
+    <text x="104" y="700" font-size="17" font-weight="700" fill="#9fbfe3" letter-spacing="1.5">CONTROL PLANE · Harness 的策略面</text>
+    <text x="104" y="750" font-size="25" font-weight="750" fill="#ffffff">Loop policy</text>
+    <text x="104" y="786" font-size="17" fill="#c9d8e8">谁规划、谁执行、何时并行、何时终止</text>
+    <text x="415" y="750" font-size="25" font-weight="750" fill="#ffffff">Context policy</text>
+    <text x="415" y="786" font-size="17" fill="#c9d8e8">每轮可见什么，何时检索与压缩</text>
+    <text x="755" y="750" font-size="25" font-weight="750" fill="#ffffff">Execution policy</text>
+    <text x="755" y="786" font-size="17" fill="#c9d8e8">工具、权限、隔离、重试与预算</text>
+    <text x="1080" y="750" font-size="25" font-weight="750" fill="#ffffff">Quality policy</text>
+    <text x="1080" y="786" font-size="17" fill="#c9d8e8">证据、测试、审批、追踪与责任边界</text>
+  </g>
+  <text x="720" y="884" text-anchor="middle" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="17" fill="#627d98">同一模型在不同 harness 下会看到不同上下文、采取不同动作、生成不同轨迹，因此评测单位应是 model–harness pair</text>
+</svg>

@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Template: https://github.com/luost26/academic-homepage -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="description" content="把 Agent Harness 视为模型外的执行与反馈层，系统梳理 loop、context、memory、state、verification、主流运行时、开源生态与自动优化方向。">
+    <meta property="og:title" content="LLM Agent Harness：从 ReAct 到 Agent Runtime 的系统综述 - Paper Notes">
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="把 Agent Harness 视为模型外的执行与反馈层，系统梳理 loop、context、memory、state、verification、主流运行时、开源生态与自动优化方向。">
+    <meta property="og:url" content="https://lyf-00.github.io/paper-notes/wiki/LLM-Agent-Harness-Survey.html">
+    <title>LLM Agent Harness：从 ReAct 到 Agent Runtime 的系统综述 - Paper Notes</title>
+    <link rel="icon" href="/paper-notes/assets/site-icon.svg" type="image/svg+xml">
+
+    <!-- Stylesheets -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/paper-notes/pagefind/pagefind-component-ui.css">
+    
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/paper-notes/assets/css/blog.css">
+    
+    <link rel="stylesheet" href="/paper-notes/assets/css/global.css">
+</head>
+<body >
+    <a class="sr-only sr-only-focusable skip-link" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-sm navbar-light fixed-top mb-5 shadow-sm">
+    <div class="container-lg">
+        <a class="navbar-brand" href="/paper-notes/"><strong>Paper Notes</strong></a>
+        <button class="nav-search-button nav-search-button-compact d-sm-none ml-auto mr-2" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+            <i class="fas fa-search" aria-hidden="true"></i>
+        </button>
+        <button class="navbar-toggler" style="font-size: 1em; padding: 0.5em;" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-map" aria-hidden="true"></i> Menu
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/">Home</a>
+                </li>
+                
+                <li class="nav-item active">
+                    <a class="nav-link" href="/paper-notes/wiki/">Wiki</a>
+                </li>
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/paper-reading/">Paper Reading</a>
+                </li>
+                
+                <li class="nav-item nav-search-item">
+                    <button class="nav-link nav-search-button" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                        <kbd class="d-none d-md-inline">⌘K</kbd>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    <main id="main-content" class="container-lg">
+        
+
+
+
+
+<div class="reading-progress" aria-hidden="true">
+    <span></span>
+</div>
+
+<div class="blog-layout-wrapper">
+    <div class="blog-main">
+        <div class="mb-3">
+            <a class="small" href="/paper-notes/wiki/">
+                <i class="fas fa-arrow-left"></i> Wiki
+            </a>
+        </div>
+
+        <details class="mobile-toc d-lg-none">
+            <summary>目录</summary>
+            <div id="blog-toc-list-mobile" class="mobile-toc-list"></div>
+        </details>
+
+        <article class="bg-white rounded-xl p-4 p-md-5 mb-4 wiki-note-card" data-pagefind-body>
+            <div class="blog-content wiki-note">
+                <h1 id="llm-agent-harness从-react-到-agent-runtime-的系统综述">LLM Agent Harness：从 ReAct 到 Agent Runtime 的系统综述</h1>
+
+<blockquote>
+  <p><strong>研究范围与证据口径。</strong> 本文讨论的不是“SWE Agent 产品榜单”，而是模型外部的执行支架如何演化。资料更新至 <strong>2026-07-29</strong>；优先采用论文、官方技术报告、官方文档与官方仓库。产品文档会持续变化，未标发布日期的页面统一按访问日理解。文中的 <strong>Agent Harness</strong> 是操作性定义，并非已经标准化的行业术语。</p>
+</blockquote>
+
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+
+<p><strong>Agent Harness 是围绕基础模型构造的执行与反馈层。</strong> 它决定 agent 如何循环、每轮看见什么上下文、能调用哪些工具、动作在哪里执行、状态和记忆怎样保存、何时压缩或恢复、怎样验证结果，以及哪些动作需要批准。可以把它写成：</p>
+
+\[\text{Agent behavior}
+= f(\text{model},\ \text{context policy},\ \text{loop},\ \text{tools},\ \text{environment},\ \text{state},\ \text{verification})\]
+
+<p>因此，<strong>模型能力不等于 agent 能力，模型名称也不是完整评测单位</strong>。同一模型放入不同 harness，会接收不同信息、使用不同动作空间、经过不同验证与停止策略，从而产生不同的 trajectory distribution。SWE-agent 已证明 Agent-Computer Interface 会显著改变软件任务行为；2026 年的实证工作进一步把 harness choice 称为 agent 评测中的 hidden variable（<a href="https://arxiv.org/abs/2405.15793">SWE-agent, 2024</a>；<a href="https://arxiv.org/abs/2607.22585">The Scaffold Effect, 2026</a>）。</p>
+
+<p>为什么现在大家开始关注 harness，而不仅是模型？</p>
+
+<ol>
+  <li><strong>前沿模型已能稳定地产生工具调用，瓶颈向长程执行迁移。</strong> ReAct 解决了“推理—行动—观察”的最小闭环，却没有解决权限、持久化、恢复、上下文退化和可靠停止（<a href="https://arxiv.org/abs/2210.03629">ReAct, 2022</a>）。</li>
+  <li><strong>真实任务跨越多个 context window。</strong> 自动 compaction 只能延长运行，不能保证关键信息不丢失；长程 agent 还需要结构化笔记、progress file、checkpoint、测试 oracle 与交接协议（<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic context engineering, 2025</a>；<a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents">Effective harnesses for long-running agents, 2025</a>）。</li>
+  <li><strong>工具让错误变成现实副作用。</strong> 文件、终端、浏览器、消息、支付或企业 API 都要求 sandbox、permissions、approval、身份隔离与审计；这些不是模型权重本身能提供的。</li>
+  <li><strong>可执行反馈成为新的能力放大器。</strong> 测试、编译器、数据库约束和环境终态可以把“再想一次”升级为可证伪的 verification loop。无外部反馈的 self-correction 并不可靠（<a href="https://arxiv.org/abs/2310.01798">LLMs Cannot Self-Correct Reasoning Yet, 2023</a>）。</li>
+  <li><strong>harness 本身开始成为优化对象。</strong> ADAS、AFlow、Agent Lightning 与 2026 年的 harness scaling 工作把 prompt、工具、控制流、memory policy、review topology 和预算纳入搜索、训练或共演化空间（<a href="https://arxiv.org/abs/2408.08435">ADAS, 2024</a>；<a href="https://arxiv.org/abs/2410.10762">AFlow, 2024</a>；<a href="https://arxiv.org/abs/2508.03680">Agent Lightning, 2025</a>）。</li>
+</ol>
+
+<p>本文的核心判断是：<strong>Prompt Engineering 优化一句指令，Context Engineering 优化每次调用的 token，Loop Engineering 优化多轮状态转移，Harness Engineering 则优化完整的可执行系统。</strong></p>
+
+<h2 id="2-什么是-agent-harness">2. 什么是 Agent Harness？</h2>
+
+<p>“framework”“runtime”“harness”“system”经常被产品命名混用。为了可比较，本文采用以下边界。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>操作性定义</th>
+      <th>典型责任</th>
+      <th>不应混淆为</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Model</strong></td>
+      <td>根据当前输入 token 产生输出的参数化模型</td>
+      <td>reasoning、generation、tool-call proposal</td>
+      <td>持久记忆、执行器、sandbox</td>
+    </tr>
+    <tr>
+      <td><strong>Agent</strong></td>
+      <td>模型动态控制过程和工具，在反馈循环中推进至终止条件的执行实体</td>
+      <td>plan、act、observe、adapt</td>
+      <td>任意多次 LLM 调用或固定 workflow</td>
+    </tr>
+    <tr>
+      <td><strong>Agent Framework / SDK</strong></td>
+      <td>描述 agent、工具、节点、handoff、guardrail 的编程抽象</td>
+      <td>authoring、composition、integration</td>
+      <td>自动等于生产 runtime</td>
+    </tr>
+    <tr>
+      <td><strong>Agent Runtime</strong></td>
+      <td>真正调度 graph/loop 并维护 run state 的运行层</td>
+      <td>execution、streaming、retry、pause/resume、persistence</td>
+      <td>完整产品和组织治理</td>
+    </tr>
+    <tr>
+      <td><strong>Agent Harness</strong></td>
+      <td>围绕模型的完整执行支架与策略集合</td>
+      <td>loop、context、memory、tools、environment、state、verification、permissions、trace</td>
+      <td>仅 prompt 模板或 UI</td>
+    </tr>
+    <tr>
+      <td><strong>Agent System</strong></td>
+      <td>部署后的整体</td>
+      <td>model + harness/runtime + app/UI + data + identity + ops + humans</td>
+      <td>其中某一个 agent</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Anthropic 把 <strong>workflow</strong> 定义为由预设代码路径编排 LLM 与工具，把 <strong>agent</strong> 定义为由 LLM 动态决定过程与工具使用（<a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents, 2024</a>）。LangGraph 则给出很清晰的分层：LangChain 是 framework，LangGraph 是 orchestration runtime，Deep Agents 是建立在其上的 harness（<a href="https://langchain-ai.github.io/langgraph/index.html">LangGraph overview</a>）。OpenAI 对 Codex 的拆解更直接：harness 包含 core agent loop、prompt/context assembly、tool wiring、sandbox/permission instructions、history 与 compaction（<a href="https://openai.com/index/unrolling-the-codex-agent-loop/">Unrolling the Codex agent loop, 2026</a>）。</p>
+
+<p>由此可以得到两个实用结论：</p>
+
+<ul>
+  <li><strong>Runtime 是 harness 的执行内核，但 harness 更宽。</strong> 狭义 runtime 关注可靠调度；harness 还规定模型能看见什么、怎样与环境交互、如何验证与治理。</li>
+  <li><strong>产品名不是架构层级。</strong> “Claude Code”“Codex”“OpenHands”在不同语境中可能指 CLI、agent、runtime、SDK 或完整产品；比较表必须注明比较对象。</li>
+</ul>
+
+<h2 id="3-agent-harness-taxonomy">3. Agent Harness Taxonomy</h2>
+
+<p><img src="../assets/wiki/llm-agent-harness-survey/taxonomy.svg" alt="LLM Agent Harness 的组件分类：内层执行循环、记忆与状态、验证与治理，以及策略控制面" /></p>
+
+<p><em>自制 taxonomy。Harness 的差异不只发生在模型调用处，而是分布于 context constructor、tool runtime、state/persistence、verification 和 governance。底部四类 policy 决定上层组件如何共同工作。</em></p>
+
+<h3 id="31-agent-loop">3.1 Agent Loop</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>模式</th>
+      <th>控制结构</th>
+      <th>适用场景</th>
+      <th>主要风险</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ReAct</strong></td>
+      <td>reason → act → observe，逐步决定下一动作</td>
+      <td>环境反馈密集、计划需要频繁修正</td>
+      <td>历史增长、短视、错误累积</td>
+    </tr>
+    <tr>
+      <td><strong>Plan-and-Execute</strong></td>
+      <td>planner → executor → inspect/replan</td>
+      <td>可分解的长程任务</td>
+      <td>计划过早固化、planner 成本</td>
+    </tr>
+    <tr>
+      <td><strong>Evaluator–Optimizer</strong></td>
+      <td>generate → evaluate → revise</td>
+      <td>有清晰 rubric、迭代确实能改善</td>
+      <td>critic 与 generator 相关错误</td>
+    </tr>
+    <tr>
+      <td><strong>Reflection / Reflexion</strong></td>
+      <td>feedback → verbal reflection → episodic memory → retry</td>
+      <td>跨 trial 学习</td>
+      <td>把主观反思误当 ground truth</td>
+    </tr>
+    <tr>
+      <td><strong>Multi-Agent</strong></td>
+      <td>manager、handoff、orchestrator-workers、parallel vote</td>
+      <td>专业化、上下文隔离、并行探索</td>
+      <td>通信成本、同步、重复与责任漂移</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>ReAct 的贡献不是三个标签，而是把模型决策、环境执行与 observation 回注连接成闭环（<a href="https://arxiv.org/abs/2210.03629">ReAct, 2022</a>）。Plan-and-Execute 将 planner 与 executor 分开，通常还需要根据结果 replan；否则只是把错误提前写成一份更长的计划（<a href="https://arxiv.org/abs/2305.04091">Plan-and-Solve, 2023</a>；<a href="https://arxiv.org/abs/2305.18323">ReWOO, 2023</a>）。</p>
+
+<p>Multi-agent 只是 orchestration topology，不是更高智能的同义词。其收益来自上下文隔离、工具专业化、并行探索和独立复核；若角色与路径完全由代码固定，按 Anthropic 的边界它仍可能是 multi-agent workflow。</p>
+
+<h3 id="32-tool-runtime-与-environment">3.2 Tool Runtime 与 Environment</h3>
+
+<p>工具层至少包含四件事：</p>
+
+<ol>
+  <li><strong>Interface</strong>：terminal、filesystem、browser、API、MCP、computer use。</li>
+  <li><strong>Execution</strong>：参数验证、超时、并发、重试、取消、幂等性和错误返回。</li>
+  <li><strong>Isolation</strong>：容器、OS sandbox、网络和文件写入边界、secret injection。</li>
+  <li><strong>Approval</strong>：哪些动作自动允许、哪些需人工批准、批准能否按 session 或 policy 复用。</li>
+</ol>
+
+<p>MCP 把“应用如何向模型暴露工具和上下文”标准化，但它不自动解决工具是否可信、调用是否该批准、结果是否正确（<a href="https://www.anthropic.com/news/model-context-protocol">Model Context Protocol, 2024</a>）。协议是连接层，不是安全内核。</p>
+
+<h3 id="33-context-engineering">3.3 Context Engineering</h3>
+
+<p><strong>Context 是某一次推理真正看见的 token 集。</strong> 它可能包含系统指令、工具 schema、当前请求、消息历史、文件片段、检索结果、memory 和 tool observations。</p>
+
+<p>Context Engineering 的问题不是“窗口能装多大”，而是：</p>
+
+<ul>
+  <li>选择：哪些信息此刻相关？</li>
+  <li>装载：startup、path-scoped、just-in-time 还是由 agent 主动检索？</li>
+  <li>压缩：何时 summarize/compact，保留哪些 invariant？</li>
+  <li>隔离：哪些探索交给 subagent，主线程只接收结论？</li>
+  <li>清理：怎样避免陈旧 observation、重复工具 schema 与失败轨迹污染后续判断？</li>
+</ul>
+
+<p>Anthropic 把它定义为在每次 inference 时，从不断增长的信息宇宙中维护最小而高信号的 token 集，并给出 compaction、structured note-taking 和 multi-agent isolation 等技术（<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective context engineering, 2025</a>）。主流系统常采用“保留头部规则 + 最近尾部 + 摘要中间”的变体；<strong>durable transcript 仍在磁盘，不代表模型仍看见完整历史</strong>。</p>
+
+<h3 id="34-memorystatecheckpoint-与-trajectory">3.4 Memory、State、Checkpoint 与 Trajectory</h3>
+
+<p>这四个概念不能混为“记忆”：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>概念</th>
+      <th>回答的问题</th>
+      <th>典型实现</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Context</strong></td>
+      <td>模型这一刻看见什么？</td>
+      <td>当前 token 序列</td>
+    </tr>
+    <tr>
+      <td><strong>Memory</strong></td>
+      <td>哪些信息可保存并在未来被选择？</td>
+      <td>Markdown、KV/store、vector/keyword index、skills</td>
+    </tr>
+    <tr>
+      <td><strong>State</strong></td>
+      <td>执行现在处于什么位置？</td>
+      <td>plan、node、variables、approval、budget、errors</td>
+    </tr>
+    <tr>
+      <td><strong>Checkpoint</strong></td>
+      <td>中断后从哪里恢复？</td>
+      <td>state snapshot、thread checkpoint</td>
+    </tr>
+    <tr>
+      <td><strong>Trajectory / Event log</strong></td>
+      <td>到底发生了什么？</td>
+      <td>thought/action/observation、tool events、JSONL trace</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Memory 可按生命周期分为 short-term/thread、task、project 和 long-term，也可按语义分为 working、episodic、semantic 与 procedural。LangGraph 把 thread-scoped checkpoint 与 cross-thread store 分开；MemGPT 用分层 memory 类比 virtual context management（<a href="https://langchain-ai.github.io/langgraph/concepts/time-travel/">LangGraph Persistence</a>；<a href="https://arxiv.org/abs/2310.08560">MemGPT, 2023</a>）。</p>
+
+<h3 id="35-verificationobservability-与-governance">3.5 Verification、Observability 与 Governance</h3>
+
+<p>Verification 可分四层：</p>
+
+<ol>
+  <li>同一模型的 intrinsic critique；</li>
+  <li>独立模型、reward model 或 critic；</li>
+  <li>tests、compiler、schema、constraint solver、simulator 等 executable verifier；</li>
+  <li>人类或组织审批。</li>
+</ol>
+
+<p>Guardrail 限制策略违规，不等于证明任务正确；trace 记录发生了什么，也不等于 correctness。一个成熟 harness 需要把 <strong>offline eval</strong>（比较版本）与 <strong>online verifier</strong>（当前 loop 的反馈）分开。OpenAI Agents SDK 的 tracing 会记录 generation、tool call、handoff 和 guardrail；LangGraph checkpoint 支持恢复；但二者都必须再接任务特定的正确性判据（<a href="https://openai.github.io/openai-agents-python/tracing/">OpenAI Agents SDK tracing</a>）。</p>
+
+<h2 id="4-从-prompt-到-harness发展历史">4. 从 Prompt 到 Harness：发展历史</h2>
+
+<p><img src="../assets/wiki/llm-agent-harness-survey/timeline.svg" alt="2019 到 2026 年 Agent Harness 演进时间线" /></p>
+
+<p><em>自制时间线。六个 era 相互重叠；新的工程对象扩大了控制范围，并没有让 prompt、tool 或单 agent 失效。</em></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>阶段</th>
+      <th style="text-align: right">时间</th>
+      <th>代表工作/系统</th>
+      <th>关键增量</th>
+      <th>尚未解决</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Era 0: Prompt Engineering</td>
+      <td style="text-align: right">2019–2022</td>
+      <td>GPT-2、GPT-3、CoT</td>
+      <td>instruction 与 in-context reasoning</td>
+      <td>外部行动、持久状态</td>
+    </tr>
+    <tr>
+      <td>Era 1: ReAct Agent</td>
+      <td style="text-align: right">2022</td>
+      <td>ReAct、MRKL</td>
+      <td>reasoning/action/observation loop</td>
+      <td>长程、恢复、权限</td>
+    </tr>
+    <tr>
+      <td>Era 2: Agent Framework</td>
+      <td style="text-align: right">2023</td>
+      <td>LangChain、AutoGPT、AutoGen、Reflexion、MemGPT</td>
+      <td>组件、角色、graph、memory 原型</td>
+      <td>framework 本身不创造 intelligence</td>
+    </tr>
+    <tr>
+      <td>Era 3: Agent Runtime</td>
+      <td style="text-align: right">2024–2025</td>
+      <td>LangGraph、SWE-agent、OpenHands、Claude Code、Codex</td>
+      <td>sandbox、state、trajectory、persistence、verification</td>
+      <td>成本、上下文退化、部署可靠性</td>
+    </tr>
+    <tr>
+      <td>Era 4: Persistent Agent</td>
+      <td style="text-align: right">2025–2026</td>
+      <td>OpenClaw、Pi、Codex app</td>
+      <td>skills、plugins、scheduler、跨会话 memory、外部通信</td>
+      <td>身份隔离、供应链与长期治理</td>
+    </tr>
+    <tr>
+      <td>Era 5: Harness Engineering</td>
+      <td style="text-align: right">2025–</td>
+      <td>Context Engineering、ADAS、AFlow、DGM、HarnessForge</td>
+      <td>loop/context/harness 作为优化对象</td>
+      <td>evaluator 质量、过拟合、安全自修改</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>三个历史节点尤其关键：</p>
+
+<ul>
+  <li><strong>2022：ReAct 把“想”与“做”连起来。</strong> 这是现代 agent loop 的最小形态，但仍主要是短程轨迹。</li>
+  <li><strong>2023：framework 爆发。</strong> LangChain、AutoGPT、AutoGen 等降低了组合工具和角色的门槛，却也暴露死循环、费用失控、上下文膨胀与不可靠停止。Framework 解决“如何表达结构”，没有直接产生更聪明的决策。</li>
+  <li><strong>2024–2026：运行可靠性成为一等对象。</strong> LangGraph 强调 durable execution，SWE-agent 强调 ACI，OpenHands 采用 event log + sandbox runtime，Claude Code/Codex 把 compaction、instructions、permissions、checkpoint 和测试纳入产品；OpenClaw 把 session、channel、scheduler 和长期 memory 组合成常驻个人运行时。</li>
+</ul>
+
+<p>“个人 Agent”也不应被写成 2025 才出现。2023 年的 Pi 已是 personal conversational AI；真正的新变化是 2025–2026 年出现具备持久 workspace、skills/plugins、scheduler、外部渠道、权限和可恢复状态的 <strong>persistent personal autonomous runtime</strong>。</p>
+
+<h2 id="5-四个核心概念">5. 四个核心概念</h2>
+
+<h3 id="51-loop-engineering">5.1 Loop Engineering</h3>
+
+<p><strong>Loop Engineering</strong> 不是统一学术术语。本文用它表示对 agent 状态转移策略的设计：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>task
+  → planner
+  → executor
+  → environment evidence
+  → verifier / reviewer
+  → replan | retry | request approval | finish
+  → memory/state update
+</code></pre></div></div>
+
+<p>它与 Prompt Engineering 的区别是：前者优化 interaction process，后者优化单次 instruction。重要参数包括 planner/executor 分工、retry、parallelism、budget、termination、critic independence、human checkpoints 和 failure recovery。</p>
+
+<h3 id="52-context-engineering">5.2 Context Engineering</h3>
+
+<p>Context Engineering 是把所有潜在信息看成一个比 context window 大得多的集合，每一轮重新构造最有用的子集。实践中要把：</p>
+
+<ul>
+  <li><strong>固定规则</strong>放在可重载的 instruction files；</li>
+  <li><strong>当前计划和进度</strong>放在结构化 state/progress file；</li>
+  <li><strong>大量探索</strong>放进隔离 subagent；</li>
+  <li><strong>长期事实</strong>存入可审计 memory；</li>
+  <li><strong>完整事件</strong>保留在 transcript，但只把必要摘要放回 active context。</li>
+</ul>
+
+<p>自动 compaction 延长运行，不等于解决长期记忆。Claude Code 官方说明 <code class="language-plaintext highlighter-rouge">CLAUDE.md</code> 与 auto memory 在 compact 后会重注入，而 path-scoped 内容需再次访问相应文件才加载（<a href="https://code.claude.com/docs/en/context-window">Claude Code context window</a>；<a href="https://code.claude.com/docs/en/memory">Claude Code memory</a>）。</p>
+
+<h3 id="53-memory-system">5.3 Memory System</h3>
+
+<p>一个可用的 memory system 至少需要：</p>
+
+<ol>
+  <li><strong>write policy</strong>：什么值得记；</li>
+  <li><strong>storage</strong>：存在哪里、作用域是什么；</li>
+  <li><strong>retrieval policy</strong>：何时召回、如何排序；</li>
+  <li><strong>update/forget policy</strong>：怎样修订、去重、过期；</li>
+  <li><strong>provenance</strong>：事实来自哪里，是否能审计；</li>
+  <li><strong>permission boundary</strong>：不同用户、channel、agent 能看什么。</li>
+</ol>
+
+<p>OpenClaw 的 <code class="language-plaintext highlighter-rouge">USER.md</code>、<code class="language-plaintext highlighter-rouge">MEMORY.md</code>、daily memory、hybrid search 与 compaction 前 memory flush 展示了较完整的个人长期记忆链；但官方也明确警告默认共享 DM session 在多用户场景可能泄露上下文，memory 不能替代 session isolation 和 permission policy（<a href="https://docs.openclaw.ai/concepts/memory">OpenClaw memory</a>；<a href="https://docs.openclaw.ai/concepts/session">OpenClaw sessions</a>）。</p>
+
+<h3 id="54-meta-harness">5.4 Meta Harness</h3>
+
+<p>Meta Harness 把 harness 自己放进 outer loop：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Outer loop: propose / modify harness
+         → evaluate on task distribution
+         → select / archive / update
+
+Inner loop: run current harness
+         → model + tools + environment trajectory
+         → task result and diagnostics
+</code></pre></div></div>
+
+<p>被优化对象可包括 prompt、工具 schema、控制流、memory/context 策略、review topology、retry 和 parallel budget。它不同于：</p>
+
+<ul>
+  <li>当前任务内 manager 调 worker 的 meta-agent orchestration；</li>
+  <li>更新模型权重的 model training。</li>
+</ul>
+
+<p>ADAS 的 Meta Agent Search 让 meta-agent 编写并筛选 agent code；AFlow 用 MCTS 与执行反馈优化 workflow；DGM 让 agent 修改自身代码并用 benchmark 验证（<a href="https://arxiv.org/abs/2408.08435">ADAS, 2024</a>；<a href="https://arxiv.org/abs/2410.10762">AFlow, 2024</a>；<a href="https://arxiv.org/abs/2505.22954">Darwin Gödel Machine, 2025</a>）。真正瓶颈不是生成更多变体，而是 <strong>evaluator 是否可靠、任务分布是否代表真实世界、改进能否跨模型与领域迁移</strong>。</p>
+
+<h2 id="6-主流-harness--agent-runtime-survey">6. 主流 Harness / Agent Runtime Survey</h2>
+
+<h3 id="61-国际系统">6.1 国际系统</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>System</th>
+      <th>维护方 / 开源</th>
+      <th>Type / Target</th>
+      <th>Loop、Context 与 Memory</th>
+      <th>Tools / State</th>
+      <th>独特设计与边界</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Claude Code</strong></td>
+      <td>Anthropic；核心 CLI 非开源</td>
+      <td>产品化 coding harness</td>
+      <td>gather context → act → verify；<code class="language-plaintext highlighter-rouge">CLAUDE.md</code>、path rules、auto memory、auto compaction；subagent 独立 context</td>
+      <td>file/search/shell/web/MCP/skills/hooks；resume/fork/checkpoint</td>
+      <td>指令、memory 与 extension 体系完整；但 memory 是 context 而非强制策略，compaction 有损，核心 loop 不可审计（<a href="https://code.claude.com/docs/en/how-claude-code-works">docs</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Codex CLI</strong></td>
+      <td>OpenAI；Apache-2.0，Rust</td>
+      <td>开源 coding harness/core</td>
+      <td>model ↔ tool item loop；<code class="language-plaintext highlighter-rouge">AGENTS.md</code> 分层注入；thread compaction；部分 memory 能力随版本/feature gate</td>
+      <td>shell/patch/web/MCP/skills/multi-agent；rollout JSONL、resume/fork/archive</td>
+      <td>OS sandbox 与 approval policy 分离；thread/turn/item app-server 协议；不同 OS 隔离强度不同（<a href="https://github.com/openai/codex">repo</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>OpenAI Agents SDK</strong></td>
+      <td>OpenAI；MIT</td>
+      <td>通用 agent SDK</td>
+      <td>model → final / handoff / tool → repeat；Sessions 与 local/server context</td>
+      <td>function/hosted/MCP/computer tools；多种 session store、RunState、trace</td>
+      <td>handoff 与 agents-as-tools 两种语义；不是开箱即用 coding runtime，sandbox 与工具安全由宿主配置（<a href="https://openai.github.io/openai-agents-python/running_agents/">runner</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>OpenHands</strong></td>
+      <td>OpenHands；核心/SDK MIT，enterprise 例外</td>
+      <td>SWE 平台、SDK、remote runtime</td>
+      <td>stateless <code class="language-plaintext highlighter-rouge">Agent.step()</code> + Conversation；append-only EventLog；condenser 保留 head/tail、摘要 middle</td>
+      <td>terminal/file/task/MCP；Docker action executor；ConversationState</td>
+      <td>event sourcing、workspace 解耦、可本地/远程；容器和摘要带来资源成本与信息损失（<a href="https://docs.openhands.dev/sdk/arch/agent">SDK architecture</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>SWE-agent</strong></td>
+      <td>SWE-agent；MIT；maintenance-only</td>
+      <td>issue repair / research harness</td>
+      <td>configurable thought–action–observation；history processors</td>
+      <td>ACI/tool bundles、SWEEnv；<code class="language-plaintext highlighter-rouge">.traj</code>、replay config</td>
+      <td>ACI 与轨迹最适合实验；不是长期个人 memory，官方建议新用户优先 mini-SWE-agent（<a href="https://github.com/SWE-agent/SWE-agent">repo</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Pi</strong></td>
+      <td>Mario Zechner / earendil-works；MIT</td>
+      <td>极简可嵌入 coding harness</td>
+      <td>agent-core tool loop；context files；lossy compaction 与 branch summary</td>
+      <td>read/bash/edit/write/extensions；JSONL tree sessions</td>
+      <td>session 原生是树，可分支/克隆；官方明确没有内置文件、进程、网络或凭据权限系统，需外部隔离（<a href="https://github.com/earendil-works/pi">repo</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>OpenClaw</strong></td>
+      <td>OpenClaw Foundation；MIT</td>
+      <td>常驻、多渠道个人 runtime</td>
+      <td>per-session serial loop；workspace memory、hybrid retrieval、compaction 前 flush</td>
+      <td>messaging/browser/shell/files/cron/session/skills；SQLite + transcript</td>
+      <td>Gateway、channels、routing、scheduler 与长期 memory 最接近“个人 Agent OS”；多用户必须配置 session isolation（<a href="https://github.com/openclaw/openclaw">repo</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>OpenCode</strong></td>
+      <td>anomalyco；MIT</td>
+      <td>provider-neutral coding harness</td>
+      <td>tool loop；rules/skills；auto compaction；subagent child sessions</td>
+      <td>file/bash/LSP/web/MCP/custom tools；local sessions</td>
+      <td>provider-neutral、LSP 与细粒度 allow/ask/deny；permission gate 不等于 OS sandbox（<a href="https://github.com/anomalyco/opencode">repo</a>）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="62-中国系统先分清模型套餐集成与-harness">6.2 中国系统：先分清模型、套餐、集成与 harness</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>System / Ecosystem</th>
+      <th>可核验的产品层级</th>
+      <th>Harness 状态</th>
+      <th>关键机制与边界</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Kimi / Kimi Code</strong></td>
+      <td>Kimi 模型 + Kimi Code CLI + Agent SDK</td>
+      <td><strong>官方完整终端 harness</strong>，开源</td>
+      <td>旧 <code class="language-plaintext highlighter-rouge">kimi-cli</code> 正式迁移到 <code class="language-plaintext highlighter-rouge">kimi-code</code>；CLI 具备文件、Shell、Web、MCP、skills，SDK 复用相同配置与会话。模型 benchmark 不应脱离 harness、采样和选择器比较（<a href="https://github.com/MoonshotAI/kimi-code">Kimi Code</a>；<a href="https://github.com/MoonshotAI/kimi-agent-sdk">Kimi Agent SDK</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>GLM / ZCode</strong></td>
+      <td>GLM 模型；GLM Coding Plan 订阅；ZCode 开发环境</td>
+      <td><strong>Coding Plan 不是 harness；ZCode 才是自有 agentic environment</strong></td>
+      <td>Coding Plan 给 Claude Code、OpenCode、Cline 等工具提供模型/配额/MCP。另有 Open-AutoGLM 手机 domain harness（<a href="https://docs.z.ai/devpack/overview">Coding Plan</a>；<a href="https://zcode.z.ai/en/docs/welcome">ZCode</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>DeepSeek ecosystem</strong></td>
+      <td>模型/API + 官方维护的集成目录</td>
+      <td><strong>未核验到等价的官方通用 coding harness</strong></td>
+      <td>官方列表教第三方 agent/coding tools 接入 DeepSeek；不能把社区工具写成“DeepSeek 官方 Agent”（<a href="https://github.com/deepseek-ai/awesome-deepseek-integration">integrations</a>；<a href="https://github.com/deepseek-ai/awesome-deepseek-agent">agent list</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Qwen Code</strong></td>
+      <td>Qwen 模型 + 官方开源 terminal harness</td>
+      <td><strong>官方完整 coding harness</strong></td>
+      <td>auto-memory、skills、subagents/teams、MCP、sandbox/worktree、IDE/IM/daemon/SDK；起点基于 Gemini CLI v0.8.2，后停止上游同步并独立演化（<a href="https://github.com/QwenLM/qwen-code">Qwen Code</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>MiMo / MiMoCode</strong></td>
+      <td>MiMo 模型 + OpenCode fork 发行版</td>
+      <td><strong>基于 OpenCode 深度演化的 harness</strong></td>
+      <td>保留多 provider、TUI、LSP、MCP 与 plugins，增加持久记忆、context、subagent、goal loop 与自改进 workflow；应披露其上游关系（<a href="https://github.com/XiaomiMiMo/MiMo-Code">MiMo Code</a>）</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>中国生态可概括为三条路线：</p>
+
+<ol>
+  <li><strong>自有完整 harness</strong>：Kimi Code、Qwen Code；</li>
+  <li><strong>基于国际开源底座深度分叉</strong>：MiMoCode ← OpenCode；</li>
+  <li><strong>模型/套餐进入多家第三方 harness</strong>：GLM Coding Plan、DeepSeek integrations。</li>
+</ol>
+
+<p>它们不能被压成“每家公司都有一个 Agent”。品牌边界本身就是 survey 需要澄清的技术事实。</p>
+
+<h3 id="63-共同结构与真正差异">6.3 共同结构与真正差异</h3>
+
+<p>主流系统的内层 loop 已高度趋同：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>assemble context → call model → execute tool → append observation → repeat
+</code></pre></div></div>
+
+<p>差异主要在 loop 外围：</p>
+
+<ul>
+  <li><strong>安全</strong>：Codex 有明确 OS sandbox + approvals；OpenHands 使用容器 runtime；Pi 官方明确无内置权限系统；OpenClaw 还要处理 channel/session 隔离。</li>
+  <li><strong>状态</strong>：OpenHands 是 append-only EventLog；SWE-agent 保存实验 trajectory；Codex/Claude/OpenClaw/OpenCode 以 thread/session 为中心；Pi 原生是 JSONL tree。</li>
+  <li><strong>记忆</strong>：SWE-agent/Pi 强在轨迹与会话；OpenClaw 强在跨会话 personal memory；Agents SDK 把 store 交给应用；Claude Code 与 Codex 把项目规则、会话和逐步演化的 memory 结合起来。</li>
+  <li><strong>研究可控性</strong>：mini-SWE-agent 的线性历史和 bash-only loop 最透明；产品型 runtime 提供更多治理能力，但变量也更多。</li>
+</ul>
+
+<h2 id="7-开源生态">7. 开源生态</h2>
+
+<p>下表中的“研究友好”指控制流可读、配置可固定、轨迹可导出和实验可复现，不等于项目质量排名。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Project</th>
+      <th>类别</th>
+      <th>Architecture</th>
+      <th>Extensibility</th>
+      <th>Research Friendly</th>
+      <th>Trajectory / State</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>OpenClaw</strong></td>
+      <td>General / Personal Runtime</td>
+      <td>Gateway + sessions + channels + memory + cron</td>
+      <td>skills、plugins、MCP、channels</td>
+      <td>中：系统变量多</td>
+      <td>SQLite sessions、transcripts、memory files</td>
+    </tr>
+    <tr>
+      <td><strong>Pi</strong></td>
+      <td>General / Coding Harness</td>
+      <td>agent-core + coding CLI + TUI/RPC</td>
+      <td>extensions、packages、skills</td>
+      <td>高：core 小、session tree 清晰</td>
+      <td>JSONL tree + compaction/branch summaries</td>
+    </tr>
+    <tr>
+      <td><strong>OpenCode</strong></td>
+      <td>Coding Harness</td>
+      <td>provider-neutral CLI/server + LSP + child sessions</td>
+      <td>agents、tools、plugins、MCP</td>
+      <td>中高</td>
+      <td>local sessions、parent-child state</td>
+    </tr>
+    <tr>
+      <td><strong>SWE-agent</strong></td>
+      <td>SWE Research Harness</td>
+      <td>configurable ACI + environment loop</td>
+      <td>tool bundles、history processors、parsers</td>
+      <td>高</td>
+      <td>完整 <code class="language-plaintext highlighter-rouge">.traj</code>、config、replay</td>
+    </tr>
+    <tr>
+      <td><strong>OpenHands</strong></td>
+      <td>SWE Platform / Runtime</td>
+      <td>Agent step + Conversation + EventLog + workspace</td>
+      <td>SDK、tools、MCP、runtime plugins</td>
+      <td>高，但部署较重</td>
+      <td>append-only event log、serializable state</td>
+    </tr>
+    <tr>
+      <td><strong>mini-SWE-agent</strong></td>
+      <td>Minimal SWE Harness</td>
+      <td>约百行 agent、bash-only、linear history</td>
+      <td>环境/model/config 可替换</td>
+      <td><strong>很高</strong>：适合 baseline、FT/RL</td>
+      <td>messages 即 trajectory，易调试</td>
+    </tr>
+    <tr>
+      <td><strong>LangGraph</strong></td>
+      <td>Framework + Runtime</td>
+      <td>state graph + checkpoint + durable task queue</td>
+      <td>nodes、edges、stores、interrupts</td>
+      <td>高</td>
+      <td>checkpoints、threads、stores</td>
+    </tr>
+    <tr>
+      <td><strong>AutoGen</strong></td>
+      <td>Multi-Agent Framework</td>
+      <td>message/event runtime + AgentChat teams</td>
+      <td>agents、teams、runtimes、extensions</td>
+      <td>中高</td>
+      <td>message/state APIs；当前 maintenance mode</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>mini-SWE-agent 的存在提供了一个重要反例：模型变强后，复杂 scaffold 并非总能带来净收益。它只用 bash、线性 history 和独立 subprocess，适合作为 benchmark/训练基线（<a href="https://github.com/SWE-agent/mini-swe-agent">mini-SWE-agent</a>）。另一方面，当任务涉及长期运行、多人权限、恢复、审批和多环境时，OpenHands、LangGraph、OpenClaw 一类重 runtime 的系统价值才会显现。<strong>不存在脱离任务、模型和风险边界的一维“最佳 harness”。</strong></p>
+
+<h2 id="8-domain-specific-harness">8. Domain-Specific Harness</h2>
+
+<p>通用 harness 往往提供 loop、memory、tools 和 state 的公共底座，再通过 adapter 连接领域：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>General runtime
+  → domain policy / ontology
+  → specialized tools and environment
+  → domain verifier
+  → risk and approval boundary
+  → replayable trajectory
+</code></pre></div></div>
+
+<p>真正的 domain-specific harness 不是在 system prompt 多加几段知识，而是把领域的 <strong>状态空间、动作空间、oracle 与风险边界</strong> 编入 runtime。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Domain</th>
+      <th>Harness 必须额外提供</th>
+      <th>代表证据</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>SWE</strong></td>
+      <td>repo/worktree、terminal、build/tests、patch、code review</td>
+      <td>SWE-agent 的 ACI；Codex cloud 的 per-task sandbox（<a href="https://openai.com/index/introducing-codex/">Codex, 2025</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Math</strong></td>
+      <td>symbolic/numeric verifier、proof checker、test-time search</td>
+      <td>executable answer checking；不能只用 self-critique</td>
+    </tr>
+    <tr>
+      <td><strong>Browser / GUI</strong></td>
+      <td>可复位的 app/OS、screen state、action grounding、终态 evaluator</td>
+      <td>OSWorld 把真实 OS/app、初态配置与执行式 evaluator 组合（<a href="https://arxiv.org/abs/2404.07972">OSWorld, 2024</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Customer service / transaction</strong></td>
+      <td>policy、domain API、模拟用户、database end state、一致性指标</td>
+      <td>τ-bench 用 pass^k 暴露“一次成功不等于稳定可靠”（<a href="https://arxiv.org/abs/2406.12045">τ-bench, 2024</a>）</td>
+    </tr>
+    <tr>
+      <td><strong>Science / chemistry</strong></td>
+      <td>instrument/API、experiment state、cost/safety、domain oracle</td>
+      <td>ChemCrow 集成专家工具，但后续工作也显示工具只在适配任务上有净收益（<a href="https://arxiv.org/abs/2304.05376">ChemCrow, 2023</a>；<a href="https://arxiv.org/abs/2411.07228">Tooling or Not Tooling?, 2024</a>）</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>未来更可能出现的是 <strong>shared runtime kernel + domain contract</strong>：公共层负责隔离、调度、状态和审计；领域层负责工具、环境、verifier 和审批。这比为每个领域复制一套完整 runtime 更可维护，也比“万能 agent + prompt adapter”更可靠。</p>
+
+<h2 id="9-future-research-direction">9. Future Research Direction</h2>
+
+<h3 id="91-harness-scaling新的-scaling-axis">9.1 Harness Scaling：新的 scaling axis</h3>
+
+<p>模型 scaling 继续重要，但长程 agent 还可沿系统维度扩大：</p>
+
+<ul>
+  <li>更多并行 rollout 与分工；</li>
+  <li>更好的 context governance；</li>
+  <li>更可信的 cross-session memory；</li>
+  <li>动态 skill/tool routing；</li>
+  <li>更强 verifier 与审计；</li>
+  <li>更高效的状态恢复和资源调度。</li>
+</ul>
+
+<p>2026 年的 <em>From Model Scaling to System Scaling</em> 把这些组件合称为 harness scaling，并提出 trajectory quality、memory hygiene、context efficiency、communication fidelity 和 verification cost 等指标（<a href="https://arxiv.org/abs/2605.26112">论文</a>）。这是单作者预印本，应视为研究议程，而非已证实定律。</p>
+
+<h3 id="92-harness-改变-trajectory-distribution">9.2 Harness 改变 Trajectory Distribution</h3>
+
+<p>同一模型 + 不同 harness 不只是最终 pass rate 不同，还会出现不同失败指纹：无动作 turn、重复探索、错误终止、验证不足、上下文遗忘与 token 浪费。未来评测至少应同时报告：</p>
+
+<ul>
+  <li>model snapshot；</li>
+  <li>harness/version 与 system prompt；</li>
+  <li>tool schema 与 ACI；</li>
+  <li>sandbox/evaluator；</li>
+  <li>token、step、time budget；</li>
+  <li>compaction 与 memory policy；</li>
+  <li>parallel sampling、selector 和 retry；</li>
+  <li>cost、latency、human oversight。</li>
+</ul>
+
+<p>否则所谓“模型比较”很可能混入 scaffold effect。最终答案只是一条轨迹的投影，训练、诊断和安全更需要可回放 trajectory。</p>
+
+<h3 id="93-harness-learning">9.3 Harness Learning</h3>
+
+<p>可自动学习的对象包括：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>路线</th>
+      <th>学什么</th>
+      <th>代表工作</th>
+      <th>风险</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Search / evolution</strong></td>
+      <td>prompt、tools、control flow、agent code</td>
+      <td>ADAS、AFlow、DGM</td>
+      <td>benchmark 过拟合、搜索成本</td>
+    </tr>
+    <tr>
+      <td><strong>RL from trajectories</strong></td>
+      <td>policy、tool use、credit assignment</td>
+      <td>Agent Lightning</td>
+      <td>奖励错误、长程 credit</td>
+    </tr>
+    <tr>
+      <td><strong>Interface adaptation</strong></td>
+      <td>environment contract、procedural skill、trajectory regulation</td>
+      <td>Life-Harness</td>
+      <td>跨领域迁移是否稳健</td>
+    </tr>
+    <tr>
+      <td><strong>Co-evolution</strong></td>
+      <td>harness structure + model policy</td>
+      <td>HarnessForge、EvoTrainer</td>
+      <td>联合空间大、兼容性与安全</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>新结果应谨慎表述为“作者报告”。尤其是 2026 年预印本的提升，必须在跨任务、跨模型、预算一致和独立 evaluator 下复现，才能称为稳定 harness learning。</p>
+
+<h3 id="94-agent-operating-system">9.4 Agent Operating System</h3>
+
+<p>“Agent OS”若要比营销比喻更严格，应至少包含：</p>
+
+<ul>
+  <li>agent/process scheduling；</li>
+  <li>context lifecycle 与 context switch；</li>
+  <li>memory/storage；</li>
+  <li>tool/capability registry；</li>
+  <li>identity、access control 与 sandbox；</li>
+  <li>event log、audit 与 resource accounting；</li>
+  <li>面向 agent 的 SDK / system calls。</li>
+</ul>
+
+<p>AIOS 把 LLM、memory manager、storage manager、tool manager 和 scheduler 组织为 OS-like kernel（<a href="https://arxiv.org/abs/2403.16971">AIOS, 2024</a>）。OpenClaw 已呈现 Gateway、daemon、routing、sessions、channels、sandbox、skills 和 cron 等“应用层 Agent OS”特征，但仍不是传统操作系统内核。这个类比最有价值的部分不是名字，而是提醒我们：<strong>context、tool、token、concurrency、credential 和 human attention 都是需要调度与隔离的系统资源。</strong></p>
+
+<h3 id="95-安全治理与长期熵">9.5 安全、治理与长期熵</h3>
+
+<p>持久 Agent 会积累 memory、skills、插件、凭据、定时任务和自修改配置。未来研究必须处理：</p>
+
+<ul>
+  <li>memory poisoning 与跨用户泄漏；</li>
+  <li>skill/plugin supply-chain risk；</li>
+  <li>indirect prompt injection；</li>
+  <li>approval fatigue；</li>
+  <li>stale state 与 zombie tasks；</li>
+  <li>自修改 harness 的可回滚、签名、审计和 evaluator capture；</li>
+  <li>agent-legible repository 如何避免长期 entropy。</li>
+</ul>
+
+<p>OpenAI 的 Harness Engineering 实践把环境、意图、feedback loop、agent-legible logs/metrics、结构约束和 entropy control 视为工程师的新工作对象（<a href="https://openai.com/index/harness-engineering/">Harness engineering, 2026</a>）。这说明 harness 的终局不是“更复杂的循环”，而是一个能持续吸收错误证据、机械化约束并保持可理解性的系统。</p>
+
+<h2 id="10-结论">10. 结论</h2>
+
+<ol>
+  <li><strong>Agent Harness 不是模型外壳，而是控制 agent 行为分布的执行与反馈层。</strong></li>
+  <li><strong>ReAct 提供最小闭环；现代 runtime 增加 context、memory、state、sandbox、verification、trace 和恢复。</strong></li>
+  <li><strong>Framework 解决如何描述，Runtime 解决如何执行，Harness 解决如何在真实环境中可靠工作，System 是完整部署整体。</strong></li>
+  <li><strong>Context、Memory、State 与 Trajectory 必须分开设计；“保存过”不等于“模型此刻看见”，完整日志也不应全部塞回窗口。</strong></li>
+  <li><strong>Multi-agent 是拓扑与预算决策，不是默认升级；极简 baseline 与复杂平台会长期共存。</strong></li>
+  <li><strong>产品比较应以 model–harness pair 为单位，并披露工具、预算、sandbox、context、selector 和 verifier。</strong></li>
+  <li><strong>下一阶段的竞争点会从 prompt/tool list 转向 trajectory data、可验证环境、context/memory governance、permissions/audit 与 harness 自动优化。</strong></li>
+</ol>
+
+<p>最简洁地说：</p>
+
+<blockquote>
+  <p><strong>模型决定“可能会多聪明”，harness 决定“这次实际看见什么、能做什么、是否能坚持、错了怎样恢复，以及完成是否有证据”。</strong></p>
+</blockquote>
+
+<h2 id="主要一手来源">主要一手来源</h2>
+
+<h3 id="概念历史与工程方法">概念、历史与工程方法</h3>
+
+<ul>
+  <li><a href="https://arxiv.org/abs/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models</a>, 2022.</li>
+  <li><a href="https://arxiv.org/abs/2303.11366">Reflexion: Language Agents with Verbal Reinforcement Learning</a>, 2023.</li>
+  <li><a href="https://arxiv.org/abs/2303.17651">Self-Refine: Iterative Refinement with Self-Feedback</a>, 2023.</li>
+  <li><a href="https://arxiv.org/abs/2304.03442">Generative Agents</a>, 2023.</li>
+  <li><a href="https://arxiv.org/abs/2310.08560">MemGPT</a>, 2023.</li>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Anthropic: Building effective agents</a>, 2024-12-19.</li>
+  <li><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic: Effective context engineering for AI agents</a>, 2025-09-29.</li>
+  <li><a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents">Anthropic: Effective harnesses for long-running agents</a>, 2025.</li>
+  <li><a href="https://openai.com/index/unrolling-the-codex-agent-loop/">OpenAI: Unrolling the Codex agent loop</a>, 2026-01-23.</li>
+  <li><a href="https://openai.com/index/harness-engineering/">OpenAI: Harness engineering</a>, 2026.</li>
+</ul>
+
+<h3 id="runtime开源项目与产品文档">Runtime、开源项目与产品文档</h3>
+
+<ul>
+  <li><a href="https://code.claude.com/docs/en/how-claude-code-works">Claude Code documentation</a>.</li>
+  <li><a href="https://github.com/openai/codex">OpenAI Codex</a>.</li>
+  <li><a href="https://github.com/openai/openai-agents-python">OpenAI Agents SDK</a>.</li>
+  <li><a href="https://github.com/OpenHands/software-agent-sdk">OpenHands Software Agent SDK</a>.</li>
+  <li><a href="https://github.com/SWE-agent/SWE-agent">SWE-agent</a> 与 <a href="https://github.com/SWE-agent/mini-swe-agent">mini-SWE-agent</a>.</li>
+  <li><a href="https://github.com/earendil-works/pi">Pi</a>.</li>
+  <li><a href="https://github.com/openclaw/openclaw">OpenClaw</a>.</li>
+  <li><a href="https://github.com/anomalyco/opencode">OpenCode</a>.</li>
+  <li><a href="https://github.com/langchain-ai/langgraph">LangGraph</a>.</li>
+  <li><a href="https://github.com/microsoft/autogen">AutoGen</a>.</li>
+  <li><a href="https://github.com/MoonshotAI/kimi-code">Kimi Code</a>, <a href="https://github.com/QwenLM/qwen-code">Qwen Code</a>, <a href="https://github.com/XiaomiMiMo/MiMo-Code">MiMo Code</a>.</li>
+</ul>
+
+<h3 id="自动优化评测与领域-harness">自动优化、评测与领域 Harness</h3>
+
+<ul>
+  <li><a href="https://arxiv.org/abs/2408.08435">Automated Design of Agentic Systems</a>, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2410.10762">AFlow</a>, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2505.22954">Darwin Gödel Machine</a>, 2025.</li>
+  <li><a href="https://arxiv.org/abs/2508.03680">Agent Lightning</a>, 2025.</li>
+  <li><a href="https://arxiv.org/abs/2605.26112">From Model Scaling to System Scaling</a>, 2026.</li>
+  <li><a href="https://arxiv.org/abs/2607.22585">The Scaffold Effect in Coding Agents</a>, 2026.</li>
+  <li><a href="https://arxiv.org/abs/2403.16971">AIOS: LLM Agent Operating System</a>, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2404.07972">OSWorld</a>, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2406.12045">τ-bench</a>, 2024.</li>
+  <li><a href="https://arxiv.org/abs/2304.05376">ChemCrow</a>, 2023.</li>
+</ul>
+
+            </div>
+        </article>
+
+        
+        
+        
+        
+    </div>
+
+    <aside class="blog-toc-sidebar">
+        <nav id="blog-toc" class="blog-toc-nav" aria-label="Table of contents">
+            <div class="blog-toc-header">
+                <div class="blog-toc-title">On This Page</div>
+                <button
+                    id="blog-toc-toggle"
+                    class="blog-toc-toggle"
+                    type="button"
+                    aria-controls="blog-toc-list"
+                    aria-expanded="true"
+                    aria-label="收起目录"
+                    title="收起目录"
+                >
+                    <svg class="blog-toc-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="blog-toc-list" class="blog-toc-list"></div>
+        </nav>
+    </aside>
+</div>
+
+    </main>
+    <footer class="footer border-top py-2 mt-5 bg-white small">
+    <div class="container-lg">
+        <div class="row my-3">
+            <div class="col-6">
+                <div class="text-muted">
+                    <i>Last updated: Aug 2026</i>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-right text-muted">
+                    Built with <a href="https://github.com/luost26/academic-homepage" target="_blank"><i class="fas fa-pencil-ruler"></i> academic-homepage</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <pagefind-config
+        bundle-path="/paper-notes/pagefind/"
+        base-url="/paper-notes/"
+        excerpt-length="30"
+        lang="zh-CN"></pagefind-config>
+    <div class="modal fade site-search-modal" id="siteSearchModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="siteSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="siteSearchModalLabel">Search</h2>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pagefind-searchbox placeholder="搜索 wiki、论文笔记、关键词..." show-sub-results="true" hide-shortcut="true"></pagefind-searchbox>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" integrity="sha512-XKa9Hemdy1Ui3KSGgJdgMyYlUg1gM+QhL6cnlyTe2qzMCYm4nAZ1PsVerQzTTXzonUR+dmswHqgJPuwCq1MaAg==" crossorigin="anonymous"></script>
+    <script type="module" src="/paper-notes/pagefind/pagefind-component-ui.js"></script>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tocbot@4.36.8/dist/tocbot.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/anchor-js@5.0.0/anchor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            renderMathInElement(document.body, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '\\[', right: '\\]', display: true},
+                  {left: '$', right: '$', display: false},
+                  {left: '\\(', right: '\\)', display: false}
+              ],
+              throwOnError : false
+            });
+            Prism.highlightAll();
+            
+
+            var siteSearchModal = document.getElementById("siteSearchModal");
+            var siteSearchBox = siteSearchModal ? siteSearchModal.querySelector("pagefind-searchbox") : null;
+            function focusSiteSearch() {
+                window.setTimeout(function() {
+                    if (siteSearchBox && typeof siteSearchBox.focus === "function") {
+                        siteSearchBox.focus();
+                    }
+                }, 80);
+            }
+            if (siteSearchModal && window.jQuery) {
+                window.jQuery(siteSearchModal).on("shown.bs.modal", focusSiteSearch);
+            }
+            document.addEventListener("keydown", function(event) {
+                var key = String(event.key || "").toLowerCase();
+                var isSearchShortcut = key === "k" && (event.metaKey || event.ctrlKey);
+                var isModalOpen = siteSearchModal && siteSearchModal.classList.contains("show");
+                var target = event.target;
+                var isTyping = target && (
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable
+                );
+                if (!isSearchShortcut || (isTyping && isModalOpen) || !siteSearchModal || !window.jQuery) return;
+                event.preventDefault();
+                window.jQuery(siteSearchModal).modal("show");
+            });
+        });
+    </script>
+    
+    <script src="/paper-notes/assets/js/blog.js"></script>
+    
+    <script src="/paper-notes/assets/js/common.js"></script>
+</body>
+</html>

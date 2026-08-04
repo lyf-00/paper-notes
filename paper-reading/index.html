@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Template: https://github.com/luost26/academic-homepage -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="description" content="Paper reading notes and research summaries.">
+    <meta property="og:title" content="Paper Reading - Paper Notes">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="Paper reading notes and research summaries.">
+    <meta property="og:url" content="https://lyf-00.github.io/paper-notes/paper-reading/">
+    <title>Paper Reading - Paper Notes</title>
+    <link rel="icon" href="/paper-notes/assets/site-icon.svg" type="image/svg+xml">
+
+    <!-- Stylesheets -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/paper-notes/pagefind/pagefind-component-ui.css">
+    
+    <link rel="stylesheet" href="/paper-notes/assets/css/global.css">
+</head>
+<body >
+    <a class="sr-only sr-only-focusable skip-link" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-sm navbar-light fixed-top mb-5 shadow-sm">
+    <div class="container-lg">
+        <a class="navbar-brand" href="/paper-notes/"><strong>Paper Notes</strong></a>
+        <button class="nav-search-button nav-search-button-compact d-sm-none ml-auto mr-2" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+            <i class="fas fa-search" aria-hidden="true"></i>
+        </button>
+        <button class="navbar-toggler" style="font-size: 1em; padding: 0.5em;" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-map" aria-hidden="true"></i> Menu
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/">Home</a>
+                </li>
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/wiki/">Wiki</a>
+                </li>
+                
+                <li class="nav-item active">
+                    <a class="nav-link" href="/paper-notes/paper-reading/">Paper Reading</a>
+                </li>
+                
+                <li class="nav-item nav-search-item">
+                    <button class="nav-link nav-search-button" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                        <kbd class="d-none d-md-inline">⌘K</kbd>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    <main id="main-content" class="container-lg">
+        
+<div class="row">
+    <div class="col-lg-11 mx-auto">
+        <section class="paper-reading-panel bg-white shadow-sm rounded-xl p-4 p-md-5" data-paper-reading-index="">
+            <div class="paper-reading-header">
+                <div>
+                    <h1 class="mb-2">Paper Reading</h1>
+                    <div class="paper-reading-meta">
+                        <span data-result-count="">3</span> notes · sorted by created time
+                    </div>
+                </div>
+                <div class="paper-header-tools">
+                    <div class="paper-search-wrap">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <input type="search" class="paper-search-input" placeholder="Search title, tag, source..." aria-label="Search paper reading notes" data-filter-search="" />
+                    </div>
+                    <label class="paper-sort-wrap">
+                        <span>Sort</span>
+                        <select data-sort-order="" aria-label="Sort paper reading notes">
+                            <option value="created-desc">Newest</option>
+                            <option value="created-asc">Oldest</option>
+                            <option value="title-asc">Title</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+
+            <div class="paper-filter-block" aria-label="Paper reading filters">
+                <div class="paper-filter-row">
+                    <div class="paper-filter-label">Category</div>
+                    <div class="paper-filter-options" data-category-filters=""></div>
+                </div>
+                <div class="paper-filter-row">
+                    <div class="paper-filter-label">Tag</div>
+                    <div class="paper-filter-options" data-tag-filters=""></div>
+                </div>
+            </div>
+
+            <div class="paper-list-toolbar">
+                <div class="paper-page-summary" data-page-summary="" aria-live="polite"></div>
+                <label class="paper-sort-wrap paper-page-size-wrap">
+                    <span>Per Page</span>
+                    <select data-page-size="" aria-label="Notes per page">
+                        <option value="12">12</option>
+                        <option value="24">24</option>
+                        <option value="48">48</option>
+                        <option value="all">All</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="wiki-list paper-note-list" data-paper-note-list="">
+                
+                
+                <article class="wiki-list-item paper-note-item" data-category="Model Architecture" data-tags="kimi-k3|mixture-of-experts|linear-attention|long-context|multimodal" data-created="2026-08-03T18:30:00+08:00" data-title="Kimi K3 架构精读：KDA、AttnRes 与 Stable LatentMoE" data-search="kimi k3 架构精读：kda、attnres 与 stable latentmoe kimi k3: open frontier intelligence 先把 kimi k3 看成沿序列、深度与宽度三条轴扩展信息流的系统，再逐层拆解 kda、gated mla、attnres、stable latentmoe 与原生视觉。 model architecture arxiv 2026 kimi-k3 mixture-of-experts linear-attention long-context multimodal">
+                    <div class="paper-note-topline">
+                        
+                        <span class="paper-note-category">Model Architecture</span>
+                        
+                        
+                        <time class="paper-note-time" datetime="2026-08-03T18:30:00+08:00">
+                            2026-08-03 18:30
+                        </time>
+                        
+                    </div>
+                    <h2 class="h5 mb-2">
+                        <a href="/paper-notes/paper-reading/Kimi-K3-Model-Architecture.html">Kimi K3 架构精读：KDA、AttnRes 与 Stable LatentMoE</a>
+                    </h2>
+                    
+                    <p class="text-muted mb-2">先把 Kimi K3 看成沿序列、深度与宽度三条轴扩展信息流的系统，再逐层拆解 KDA、Gated MLA、AttnRes、Stable LatentMoE 与原生视觉。</p>
+                    
+                    
+                    <div class="paper-note-tags" aria-label="Tags">
+                        
+                        <span class="paper-note-tag">kimi-k3</span>
+                        
+                        <span class="paper-note-tag">mixture-of-experts</span>
+                        
+                        <span class="paper-note-tag">linear-attention</span>
+                        
+                        <span class="paper-note-tag">long-context</span>
+                        
+                        <span class="paper-note-tag">multimodal</span>
+                        
+                    </div>
+                    
+                </article>
+                
+                
+                <article class="wiki-list-item paper-note-item" data-category="Agent Systems" data-tags="terminal-agents|environment-synthesis|data-synthesis|verifiable-environments|agent-training" data-created="2026-07-28T15:20:00+08:00" data-title="Terminal Agent Environment Synthesis：六篇论文与一条数据生产线" data-search="terminal agent environment synthesis：六篇论文与一条数据生产线 terminal-agent environment synthesis: a six-paper reading synthesis 比较 endless terminals、tmax、skillsynth、terminal-world、cli-universe 与 terminal-lego 如何生成 task、container、verifier 和 trajectory。 agent systems arxiv reading synthesis 2026 terminal-agents environment-synthesis data-synthesis verifiable-environments agent-training">
+                    <div class="paper-note-topline">
+                        
+                        <span class="paper-note-category">Agent Systems</span>
+                        
+                        
+                        <time class="paper-note-time" datetime="2026-07-28T15:20:00+08:00">
+                            2026-07-28 15:20
+                        </time>
+                        
+                    </div>
+                    <h2 class="h5 mb-2">
+                        <a href="/paper-notes/paper-reading/Terminal-Agent-Environment-Synthesis.html">Terminal Agent Environment Synthesis：六篇论文与一条数据生产线</a>
+                    </h2>
+                    
+                    <p class="text-muted mb-2">比较 Endless Terminals、TMax、SkillSynth、Terminal-World、CLI-Universe 与 Terminal-Lego 如何生成 task、container、verifier 和 trajectory。</p>
+                    
+                    
+                    <div class="paper-note-tags" aria-label="Tags">
+                        
+                        <span class="paper-note-tag">terminal-agents</span>
+                        
+                        <span class="paper-note-tag">environment-synthesis</span>
+                        
+                        <span class="paper-note-tag">data-synthesis</span>
+                        
+                        <span class="paper-note-tag">verifiable-environments</span>
+                        
+                        <span class="paper-note-tag">agent-training</span>
+                        
+                    </div>
+                    
+                </article>
+                
+                
+                <article class="wiki-list-item paper-note-item" data-category="Agent Systems" data-tags="terminal-agents|data-synthesis|verifiable-environments|agent-training" data-created="2026-07-28T14:49:22+08:00" data-title="CLI-Universe：为终端 Agent 合成可验证训练任务" data-search="cli-universe：为终端 agent 合成可验证训练任务 cli-universe: towards verifiable task synthesis engine for terminal agents cli-universe 不追求把任务生成得更多，而是用能力分类、证据研究、容器环境和 fail-to-pass 过滤，把候选任务压缩成高信息密度训练轨迹。 agent systems arxiv 2026 terminal-agents data-synthesis verifiable-environments agent-training">
+                    <div class="paper-note-topline">
+                        
+                        <span class="paper-note-category">Agent Systems</span>
+                        
+                        
+                        <time class="paper-note-time" datetime="2026-07-28T14:49:22+08:00">
+                            2026-07-28 14:49
+                        </time>
+                        
+                    </div>
+                    <h2 class="h5 mb-2">
+                        <a href="/paper-notes/paper-reading/CLI-Universe.html">CLI-Universe：为终端 Agent 合成可验证训练任务</a>
+                    </h2>
+                    
+                    <p class="text-muted mb-2">CLI-Universe 不追求把任务生成得更多，而是用能力分类、证据研究、容器环境和 fail-to-pass 过滤，把候选任务压缩成高信息密度训练轨迹。</p>
+                    
+                    
+                    <div class="paper-note-tags" aria-label="Tags">
+                        
+                        <span class="paper-note-tag">terminal-agents</span>
+                        
+                        <span class="paper-note-tag">data-synthesis</span>
+                        
+                        <span class="paper-note-tag">verifiable-environments</span>
+                        
+                        <span class="paper-note-tag">agent-training</span>
+                        
+                    </div>
+                    
+                </article>
+                
+            </div>
+
+            <div class="paper-empty-state" data-empty-state="" hidden="">No matching notes.</div>
+            <nav class="paper-pagination" data-pagination="" aria-label="Paper reading pagination"></nav>
+        </section>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var root = document.querySelector("[data-paper-reading-index]");
+    if (!root) return;
+
+    var items = Array.prototype.slice.call(root.querySelectorAll(".paper-note-item"));
+    var list = root.querySelector("[data-paper-note-list]");
+    var searchInput = root.querySelector("[data-filter-search]");
+    var sortSelect = root.querySelector("[data-sort-order]");
+    var pageSizeSelect = root.querySelector("[data-page-size]");
+    var categoryWrap = root.querySelector("[data-category-filters]");
+    var tagWrap = root.querySelector("[data-tag-filters]");
+    var count = root.querySelector("[data-result-count]");
+    var pageSummary = root.querySelector("[data-page-summary]");
+    var pagination = root.querySelector("[data-pagination]");
+    var emptyState = root.querySelector("[data-empty-state]");
+    var activeCategory = "all";
+    var activeTag = "all";
+    var currentPage = 1;
+    var filteredItems = items.slice();
+
+    function normalize(value) {
+        return String(value || "").trim();
+    }
+
+    function increment(map, key) {
+        key = normalize(key);
+        if (!key) return;
+        map.set(key, (map.get(key) || 0) + 1);
+    }
+
+    function buildMapFromItems() {
+        var categories = new Map();
+        var tags = new Map();
+        items.forEach(function(item) {
+            increment(categories, item.dataset.category || "Uncategorized");
+            normalize(item.dataset.tags).split("|").forEach(function(tag) {
+                increment(tags, tag);
+            });
+        });
+        return { categories: categories, tags: tags };
+    }
+
+    function makeButton(label, value, total, activeValue, onClick) {
+        var button = document.createElement("button");
+        var labelSpan = document.createElement("span");
+        var totalSpan = document.createElement("span");
+        button.type = "button";
+        button.className = "paper-filter-btn";
+        button.dataset.value = value;
+        button.setAttribute("aria-pressed", value === activeValue ? "true" : "false");
+        labelSpan.textContent = label;
+        totalSpan.className = "paper-filter-count";
+        totalSpan.textContent = total;
+        button.appendChild(labelSpan);
+        button.appendChild(totalSpan);
+        button.addEventListener("click", onClick);
+        return button;
+    }
+
+    function renderButtons(container, map, activeValue, onSelect, options) {
+        var opts = options || {};
+        container.innerHTML = "";
+        container.appendChild(makeButton("All", "all", items.length, activeValue, function() {
+            onSelect("all");
+        }));
+        var entries = Array.from(map.entries());
+        if (opts.collapseAfter) {
+            entries.sort(function(a, b) {
+                return b[1] - a[1] || a[0].localeCompare(b[0]);
+            });
+        } else {
+            entries.sort(function(a, b) {
+                return a[0].localeCompare(b[0]);
+            });
+        }
+        var visibleLimit = opts.collapseAfter && entries.length > opts.collapseAfter + 3
+            ? opts.collapseAfter
+            : entries.length;
+        entries.forEach(function(entry, index) {
+            var button = makeButton(entry[0], entry[0], entry[1], activeValue, function() {
+                onSelect(entry[0]);
+            });
+            if (index >= visibleLimit && entry[0] !== activeValue) {
+                button.hidden = true;
+                button.dataset.overflow = "true";
+            }
+            container.appendChild(button);
+        });
+        if (visibleLimit < entries.length) {
+            var hiddenCount = entries.length - visibleLimit;
+            var moreButton = document.createElement("button");
+            moreButton.type = "button";
+            moreButton.className = "paper-filter-btn paper-filter-more";
+            moreButton.setAttribute("aria-expanded", "false");
+            moreButton.textContent = "+" + hiddenCount + " more";
+            moreButton.addEventListener("click", function() {
+                var expand = moreButton.getAttribute("aria-expanded") !== "true";
+                Array.prototype.slice.call(container.querySelectorAll("[data-overflow]")).forEach(function(hiddenBtn) {
+                    hiddenBtn.hidden = !expand;
+                });
+                moreButton.setAttribute("aria-expanded", String(expand));
+                moreButton.textContent = expand ? "Show fewer" : "+" + hiddenCount + " more";
+            });
+            container.appendChild(moreButton);
+        }
+    }
+
+    function updatePressed(container, activeValue) {
+        Array.prototype.slice.call(container.querySelectorAll("button")).forEach(function(button) {
+            if (!button.dataset.value) return;
+            button.setAttribute("aria-pressed", button.dataset.value === activeValue ? "true" : "false");
+        });
+    }
+
+    function itemTags(item) {
+        return normalize(item.dataset.tags).split("|").filter(Boolean);
+    }
+
+    function sortedItems(sourceItems) {
+        var mode = sortSelect.value;
+        return sourceItems.slice().sort(function(a, b) {
+            if (mode === "title-asc") {
+                return normalize(a.dataset.title).localeCompare(normalize(b.dataset.title));
+            }
+
+            var aTime = Date.parse(a.dataset.created || "") || 0;
+            var bTime = Date.parse(b.dataset.created || "") || 0;
+            if (mode === "created-asc") {
+                return aTime - bTime;
+            }
+            return bTime - aTime;
+        });
+    }
+
+    function pageSize() {
+        if (!pageSizeSelect || pageSizeSelect.value === "all") {
+            return filteredItems.length || 1;
+        }
+        return parseInt(pageSizeSelect.value, 10) || 12;
+    }
+
+    function totalPages() {
+        return Math.max(1, Math.ceil(filteredItems.length / pageSize()));
+    }
+
+    function clampPage() {
+        currentPage = Math.min(Math.max(currentPage, 1), totalPages());
+    }
+
+    function makePageButton(label, page, options) {
+        var button = document.createElement("button");
+        var opts = options || {};
+        button.type = "button";
+        button.className = "paper-page-btn";
+        button.textContent = label;
+        button.disabled = !!opts.disabled;
+        if (opts.current) {
+            button.setAttribute("aria-current", "page");
+        }
+        button.addEventListener("click", function() {
+            if (button.disabled || currentPage === page) return;
+            currentPage = page;
+            renderPage();
+            var currentButton = pagination.querySelector('[aria-current="page"]');
+            if (currentButton) currentButton.focus();
+        });
+        return button;
+    }
+
+    function visiblePageNumbers() {
+        var pages = totalPages();
+        var values = [];
+        var start = Math.max(1, currentPage - 2);
+        var end = Math.min(pages, currentPage + 2);
+
+        values.push(1);
+        for (var page = start; page <= end; page += 1) {
+            if (values.indexOf(page) === -1) values.push(page);
+        }
+        if (values.indexOf(pages) === -1) values.push(pages);
+        return values.sort(function(a, b) { return a - b; });
+    }
+
+    function renderPagination() {
+        if (!pagination) return;
+        pagination.innerHTML = "";
+
+        if (filteredItems.length === 0 || pageSizeSelect.value === "all" || totalPages() <= 1) {
+            pagination.hidden = true;
+            return;
+        }
+
+        pagination.hidden = false;
+        pagination.appendChild(makePageButton("Prev", currentPage - 1, {
+            disabled: currentPage === 1
+        }));
+
+        var pages = visiblePageNumbers();
+        pages.forEach(function(page, index) {
+            if (index > 0 && page - pages[index - 1] > 1) {
+                var gap = document.createElement("span");
+                gap.className = "paper-page-gap";
+                gap.textContent = "...";
+                pagination.appendChild(gap);
+            }
+            pagination.appendChild(makePageButton(String(page), page, {
+                current: page === currentPage
+            }));
+        });
+
+        pagination.appendChild(makePageButton("Next", currentPage + 1, {
+            disabled: currentPage === totalPages()
+        }));
+    }
+
+    function updatePageSummary(start, end) {
+        if (!pageSummary) return;
+        if (filteredItems.length === 0) {
+            pageSummary.textContent = "Showing 0 notes";
+            return;
+        }
+        pageSummary.textContent = "Showing " + start + "-" + end + " of " + filteredItems.length + " notes";
+    }
+
+    function renderPage() {
+        if (!list) return;
+        clampPage();
+
+        var size = pageSize();
+        var startIndex = (currentPage - 1) * size;
+        var endIndex = Math.min(startIndex + size, filteredItems.length);
+        var pageItems = filteredItems.slice(startIndex, endIndex);
+
+        items.forEach(function(item) {
+            item.hidden = true;
+        });
+
+        pageItems.forEach(function(item) {
+            item.hidden = false;
+            list.appendChild(item);
+        });
+
+        updatePageSummary(filteredItems.length ? startIndex + 1 : 0, endIndex);
+        renderPagination();
+    }
+
+    function applyFilters(resetPage) {
+        var query = normalize(searchInput.value).toLowerCase();
+
+        filteredItems = sortedItems(items.filter(function(item) {
+            var matchesSearch = !query || normalize(item.dataset.search).indexOf(query) !== -1;
+            var matchesCategory = activeCategory === "all" || item.dataset.category === activeCategory;
+            var matchesTag = activeTag === "all" || itemTags(item).indexOf(activeTag) !== -1;
+            return matchesSearch && matchesCategory && matchesTag;
+        }));
+
+        if (resetPage) {
+            currentPage = 1;
+        }
+
+        count.textContent = filteredItems.length;
+        emptyState.hidden = filteredItems.length !== 0;
+        updatePressed(categoryWrap, activeCategory);
+        updatePressed(tagWrap, activeTag);
+        renderPage();
+    }
+
+    var maps = buildMapFromItems();
+    renderButtons(categoryWrap, maps.categories, activeCategory, function(value) {
+        activeCategory = value;
+        applyFilters(true);
+    });
+    renderButtons(tagWrap, maps.tags, activeTag, function(value) {
+        activeTag = value;
+        applyFilters(true);
+    }, { collapseAfter: 15 });
+
+    searchInput.addEventListener("input", function() {
+        applyFilters(true);
+    });
+    if (sortSelect) {
+        sortSelect.addEventListener("change", function() {
+            applyFilters(true);
+        });
+    }
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener("change", function() {
+            applyFilters(true);
+        });
+    }
+    applyFilters(true);
+});
+</script>
+
+
+    </main>
+    <footer class="footer border-top py-2 mt-5 bg-white small">
+    <div class="container-lg">
+        <div class="row my-3">
+            <div class="col-6">
+                <div class="text-muted">
+                    <i>Last updated: Aug 2026</i>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-right text-muted">
+                    Built with <a href="https://github.com/luost26/academic-homepage" target="_blank"><i class="fas fa-pencil-ruler"></i> academic-homepage</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <pagefind-config
+        bundle-path="/paper-notes/pagefind/"
+        base-url="/paper-notes/"
+        excerpt-length="30"
+        lang="zh-CN"></pagefind-config>
+    <div class="modal fade site-search-modal" id="siteSearchModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="siteSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="siteSearchModalLabel">Search</h2>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pagefind-searchbox placeholder="搜索 wiki、论文笔记、关键词..." show-sub-results="true" hide-shortcut="true"></pagefind-searchbox>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" integrity="sha512-XKa9Hemdy1Ui3KSGgJdgMyYlUg1gM+QhL6cnlyTe2qzMCYm4nAZ1PsVerQzTTXzonUR+dmswHqgJPuwCq1MaAg==" crossorigin="anonymous"></script>
+    <script type="module" src="/paper-notes/pagefind/pagefind-component-ui.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+
+            var siteSearchModal = document.getElementById("siteSearchModal");
+            var siteSearchBox = siteSearchModal ? siteSearchModal.querySelector("pagefind-searchbox") : null;
+            function focusSiteSearch() {
+                window.setTimeout(function() {
+                    if (siteSearchBox && typeof siteSearchBox.focus === "function") {
+                        siteSearchBox.focus();
+                    }
+                }, 80);
+            }
+            if (siteSearchModal && window.jQuery) {
+                window.jQuery(siteSearchModal).on("shown.bs.modal", focusSiteSearch);
+            }
+            document.addEventListener("keydown", function(event) {
+                var key = String(event.key || "").toLowerCase();
+                var isSearchShortcut = key === "k" && (event.metaKey || event.ctrlKey);
+                var isModalOpen = siteSearchModal && siteSearchModal.classList.contains("show");
+                var target = event.target;
+                var isTyping = target && (
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable
+                );
+                if (!isSearchShortcut || (isTyping && isModalOpen) || !siteSearchModal || !window.jQuery) return;
+                event.preventDefault();
+                window.jQuery(siteSearchModal).modal("show");
+            });
+        });
+    </script>
+    
+    <script src="/paper-notes/assets/js/common.js"></script>
+</body>
+</html>

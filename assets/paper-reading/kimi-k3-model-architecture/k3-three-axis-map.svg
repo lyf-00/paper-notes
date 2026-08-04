@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Kimi K3 三维信息流架构图</title>
+  <desc id="desc">展示 Kimi K3 在 token、depth、channel 三个维度的信息流机制，以及原生视觉输入和训练稳定器。</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8fc; }
+      .card { fill: #ffffff; stroke: #c9d1e6; stroke-width: 2; rx: 20; }
+      .token { fill: #e6f0ff; stroke: #3b70b7; }
+      .depth { fill: #fff0e6; stroke: #b56a38; }
+      .channel { fill: #e8f6ec; stroke: #3f8b5a; }
+      .side { fill: #f3ecff; stroke: #7653a6; }
+      .title { font: 700 34px "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #17213a; }
+      .label { font: 700 24px "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #17213a; }
+      .body { font: 18px "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #33405f; }
+      .small { font: 16px "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #53617e; }
+      .arrow { stroke: #52617e; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#52617e"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1200" height="720"/>
+  <text class="title" x="600" y="58" text-anchor="middle">Kimi K3：把信息流同时沿三个维度扩展</text>
+
+  <rect class="card token" x="55" y="115" width="330" height="235" rx="20"/>
+  <text class="label" x="220" y="158" text-anchor="middle">Token / 序列维</text>
+  <text class="body" x="85" y="205">3 × KDA</text>
+  <text class="small" x="85" y="237">线性递推，负责长序列与位置敏感混合</text>
+  <text class="body" x="85" y="282">1 × Gated MLA</text>
+  <text class="small" x="85" y="314">周期性全局注意力；骨干末尾再补 1 层</text>
+
+  <rect class="card depth" x="435" y="115" width="330" height="235" rx="20"/>
+  <text class="label" x="600" y="158" text-anchor="middle">Depth / 深度维</text>
+  <text class="body" x="465" y="205">Block AttnRes</text>
+  <text class="small" x="465" y="237">每层用伪 query 选择历史 block 表示</text>
+  <text class="small" x="465" y="276">8 个层块 + embedding 源</text>
+  <text class="small" x="465" y="314">把“固定相加”改成“按需读取”</text>
+
+  <rect class="card channel" x="815" y="115" width="330" height="235" rx="20"/>
+  <text class="label" x="980" y="158" text-anchor="middle">Channel / 宽度维</text>
+  <text class="body" x="845" y="205">Stable LatentMoE</text>
+  <text class="small" x="845" y="237">896 个 routed experts，token 选 16</text>
+  <text class="small" x="845" y="276">7168 → 3584 latent → 7168</text>
+  <text class="small" x="845" y="314">RMSNorm + SiTU-GLU + QB 稳定训练</text>
+
+  <path class="arrow" d="M385 232 L425 232"/>
+  <path class="arrow" d="M765 232 L805 232"/>
+
+  <rect class="card side" x="170" y="435" width="390" height="185" rx="20"/>
+  <text class="label" x="365" y="478" text-anchor="middle">原生视觉入口</text>
+  <text class="body" x="205" y="522">MoonViT-V2 → MLP → shared embedding</text>
+  <text class="small" x="205" y="558">图像/视频与文本进入同一骨干、同一上下文</text>
+  <text class="small" x="205" y="592">27 层，约 401M 参数；从零开始联合训练</text>
+
+  <rect class="card" x="640" y="435" width="390" height="185" rx="20"/>
+  <text class="label" x="835" y="478" text-anchor="middle">优化与数值稳定</text>
+  <text class="body" x="675" y="522">Per-Head Muon</text>
+  <text class="small" x="675" y="558">按 attention head 正交化动量更新</text>
+  <text class="small" x="675" y="592">KDA 衰减下界、FP32 attention 输出等</text>
+
+  <path class="arrow" d="M365 435 C365 390 510 390 535 352"/>
+  <path class="arrow" d="M835 435 C835 390 690 390 665 352"/>
+  <text class="small" x="600" y="682" text-anchor="middle">读法：先看三条主干，再把视觉与优化器当作输入侧和训练侧支撑。</text>
+</svg>

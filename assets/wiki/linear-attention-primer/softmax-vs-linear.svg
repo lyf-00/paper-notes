@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Softmax Attention 与 Linear Attention 的计算路径对比</title>
+  <desc id="desc">左侧展示标准注意力先构造 token-token 矩阵，右侧展示线性注意力先把 key value 压缩进固定大小状态再由 query 读取。</desc>
+  <defs>
+    <style>
+      .bg{fill:#f7f8fc}.panel{fill:#fff;stroke:#cbd3e7;stroke-width:2}.title{font:700 34px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#17213a}.head{font:700 25px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#17213a}.body{font:18px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#34415f}.small{font:16px "Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#596782}.q{fill:#e7f0ff;stroke:#4f77b6}.k{fill:#e9f7ed;stroke:#4a8e5e}.v{fill:#fff0e5;stroke:#bd7442}.m{fill:#f3edff;stroke:#7a5aae}.arrow{stroke:#596782;stroke-width:3;fill:none;marker-end:url(#a)}.grid{stroke:#9aa6c1;stroke-width:1}.hot{fill:#d9c9f3}.cold{fill:#f4f1fa}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#596782"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="720"/>
+  <text class="title" x="600" y="58" text-anchor="middle">同样是“query 按 key 取 value”，中间对象不同</text>
+  <rect class="panel" x="45" y="95" width="535" height="565" rx="22"/>
+  <rect class="panel" x="620" y="95" width="535" height="565" rx="22"/>
+  <text class="head" x="312" y="140" text-anchor="middle">Softmax Attention</text>
+  <text class="body" x="312" y="172" text-anchor="middle">先形成 token × token 的注意力图</text>
+  <rect class="q" x="95" y="220" width="105" height="52" rx="10"/><text class="body" x="147" y="253" text-anchor="middle">Q [T,d]</text>
+  <rect class="k" x="95" y="310" width="105" height="52" rx="10"/><text class="body" x="147" y="343" text-anchor="middle">Kᵀ [d,T]</text>
+  <path class="arrow" d="M205 246 L260 280"/><path class="arrow" d="M205 336 L260 302"/>
+  <g transform="translate(280 220)">
+    <rect class="hot" width="220" height="220"/>
+    <path class="grid" d="M44 0V220M88 0V220M132 0V220M176 0V220M0 44H220M0 88H220M0 132H220M0 176H220"/>
+    <path d="M44 0H220V44H88V88H132V132H176V176H220V220H0V0Z" fill="#f4f1fa" opacity=".78"/>
+  </g>
+  <text class="small" x="390" y="465" text-anchor="middle">A = softmax(QKᵀ), [T,T]</text>
+  <rect class="v" x="95" y="500" width="105" height="52" rx="10"/><text class="body" x="147" y="533" text-anchor="middle">V [T,dᵥ]</text>
+  <path class="arrow" d="M205 526 L335 526"/><path class="arrow" d="M390 470 L390 500"/>
+  <rect class="m" x="345" y="500" width="150" height="52" rx="10"/><text class="body" x="420" y="533" text-anchor="middle">O = AV</text>
+  <text class="body" x="312" y="600" text-anchor="middle">序列维成本：O(T²)</text>
+  <text class="small" x="312" y="630" text-anchor="middle">解码还需保存随 T 增长的 KV cache</text>
+
+  <text class="head" x="887" y="140" text-anchor="middle">Linear Attention</text>
+  <text class="body" x="887" y="172" text-anchor="middle">先把历史压缩成固定大小矩阵状态</text>
+  <rect class="k" x="680" y="220" width="150" height="52" rx="10"/><text class="body" x="755" y="253" text-anchor="middle">φ(K)ᵀ [r,T]</text>
+  <rect class="v" x="680" y="310" width="150" height="52" rx="10"/><text class="body" x="755" y="343" text-anchor="middle">V [T,dᵥ]</text>
+  <path class="arrow" d="M835 246 L875 280"/><path class="arrow" d="M835 336 L875 302"/>
+  <rect class="m" x="890" y="245" width="205" height="92" rx="14"/><text class="body" x="992" y="280" text-anchor="middle">S = φ(K)ᵀV</text><text class="small" x="992" y="310" text-anchor="middle">[r,dᵥ]，与 T 无关</text>
+  <rect class="q" x="680" y="430" width="150" height="52" rx="10"/><text class="body" x="755" y="463" text-anchor="middle">φ(Q) [T,r]</text>
+  <path class="arrow" d="M835 456 L900 398"/><path class="arrow" d="M992 342 L992 390"/>
+  <rect class="m" x="900" y="390" width="195" height="92" rx="14"/><text class="body" x="997" y="425" text-anchor="middle">O = φ(Q)S</text><text class="small" x="997" y="455" text-anchor="middle">causal 时 S 逐步更新</text>
+  <text class="body" x="887" y="545" text-anchor="middle">序列维成本：O(T)</text>
+  <text class="small" x="887" y="578" text-anchor="middle">固定 head/state 维度时，不构造 [T,T]</text>
+  <text class="small" x="887" y="612" text-anchor="middle">代价：所有历史必须挤进有限状态 S</text>
+  <text class="small" x="600" y="698" text-anchor="middle">“Linear” 指对序列长度 T 的渐进复杂度，不是说整个网络只有线性函数。</text>
+</svg>

@@ -1,0 +1,3065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- Template: https://github.com/luost26/academic-homepage -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="description" content="比较 Endless Terminals、TMax、SkillSynth、Terminal-World、CLI-Universe 与 Terminal-Lego 如何生成 task、container、verifier 和 trajectory。">
+    <meta property="og:title" content="Terminal Agent Environment Synthesis：六篇论文与一条数据生产线 - Paper Notes">
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="比较 Endless Terminals、TMax、SkillSynth、Terminal-World、CLI-Universe 与 Terminal-Lego 如何生成 task、container、verifier 和 trajectory。">
+    <meta property="og:url" content="https://lyf-00.github.io/paper-notes/paper-reading/Terminal-Agent-Environment-Synthesis.html">
+    <title>Terminal Agent Environment Synthesis：六篇论文与一条数据生产线 - Paper Notes</title>
+    <link rel="icon" href="/paper-notes/assets/site-icon.svg" type="image/svg+xml">
+
+    <!-- Stylesheets -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/paper-notes/pagefind/pagefind-component-ui.css">
+    
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="/paper-notes/assets/css/blog.css">
+    
+    <link rel="stylesheet" href="/paper-notes/assets/css/global.css">
+</head>
+<body >
+    <a class="sr-only sr-only-focusable skip-link" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-sm navbar-light fixed-top mb-5 shadow-sm">
+    <div class="container-lg">
+        <a class="navbar-brand" href="/paper-notes/"><strong>Paper Notes</strong></a>
+        <button class="nav-search-button nav-search-button-compact d-sm-none ml-auto mr-2" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+            <i class="fas fa-search" aria-hidden="true"></i>
+        </button>
+        <button class="navbar-toggler" style="font-size: 1em; padding: 0.5em;" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-map" aria-hidden="true"></i> Menu
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/">Home</a>
+                </li>
+                
+                <li class="nav-item ">
+                    <a class="nav-link" href="/paper-notes/wiki/">Wiki</a>
+                </li>
+                
+                <li class="nav-item active">
+                    <a class="nav-link" href="/paper-notes/paper-reading/">Paper Reading</a>
+                </li>
+                
+                <li class="nav-item nav-search-item">
+                    <button class="nav-link nav-search-button" type="button" data-toggle="modal" data-target="#siteSearchModal" aria-label="Search site">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <span>Search</span>
+                        <kbd class="d-none d-md-inline">⌘K</kbd>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    <main id="main-content" class="container-lg">
+        
+
+
+
+
+<div class="reading-progress" aria-hidden="true">
+    <span></span>
+</div>
+
+<div class="blog-layout-wrapper">
+    <div class="blog-main">
+        <div class="mb-3">
+            <a class="small" href="/paper-notes/paper-reading/">
+                <i class="fas fa-arrow-left"></i> Paper Reading
+            </a>
+        </div>
+
+        <details class="mobile-toc d-lg-none">
+            <summary>目录</summary>
+            <div id="blog-toc-list-mobile" class="mobile-toc-list"></div>
+        </details>
+
+        <article class="bg-white rounded-xl p-4 p-md-5 mb-4 wiki-note-card" data-pagefind-body>
+            <div class="blog-content wiki-note">
+                <h1 id="terminal-agent-environment-synthesis六篇论文与一条数据生产线">Terminal Agent Environment Synthesis：六篇论文与一条数据生产线</h1>
+
+<h2 id="核心问题">核心问题</h2>
+
+<p>这里不比较“谁在 Terminal-Bench 上分数更高”，而是回答一个更基础的问题：</p>
+
+<blockquote>
+  <p>如果我们想训练一个 terminal agent，怎样把一句自然语言任务变成一个可启动、可交互、可恢复、可自动打分的环境？</p>
+</blockquote>
+
+<p>六篇论文恰好给出了六种取舍：</p>
+
+<ol>
+  <li><strong>Endless Terminals</strong>：把生成拆成四个阶段，用硬过滤保证 container 可用、测试有效、任务可解。</li>
+  <li><strong>TMax</strong>：用九个正交轴直接控制多样性与难度，省掉昂贵的 teacher correctness filter，把一部分过滤推迟到 RL rollout。</li>
+  <li><strong>SkillSynth</strong>：先在 scenario-mediated skill graph 中采样一条最小解题路径，再让 multi-agent harness 实例化任务。</li>
+  <li><strong>Terminal-World</strong>：把 agent skill 当作同时包含 what / when / how 的合成原语，共同生成 instruction、environment、verifier 与 teacher guideline。</li>
+  <li><strong>CLI-Universe</strong>：先用真实技术材料把 task blueprint 研究扎实，再用 rubric-gated tests、hint 对照和 fail-to-pass 提高监督密度。</li>
+  <li><strong>Terminal-Lego</strong>：把真实 StackOverflow issue 级联生成成可执行任务，再追问固定 harness 下什么样的 inspect–act–verify trajectory 最适合教会 student。</li>
+</ol>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/five-pipelines-map.svg" alt="五篇论文的环境合成路线图" /></p>
+
+<p><em>自制方法地图展示前五篇以 environment synthesis 为主的路线。Terminal-Lego 复用同一组 task 做 matched-teacher 对照，把问题继续推进到 harness 与 trajectory supervision：环境可执行只是起点，交互过程是否显式暴露 observation 才决定它是否适合蒸馏。</em></p>
+
+<hr />
+
+<h2 id="一个-terminal-training-environment-包含什么">一个 terminal training environment 包含什么</h2>
+
+<p>一个完整训练实例不只是 prompt，而是五件东西：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>组件</th>
+      <th>作用</th>
+      <th>常见文件/表示</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Task instruction</td>
+      <td>告诉 agent 要达到什么目标</td>
+      <td><code class="language-plaintext highlighter-rouge">task.md</code>、<code class="language-plaintext highlighter-rouge">instruction</code></td>
+    </tr>
+    <tr>
+      <td>Initial state</td>
+      <td>定义开始时有哪些文件、服务、错误状态</td>
+      <td>source files、fixtures、filesystem snapshot</td>
+    </tr>
+    <tr>
+      <td>Runtime</td>
+      <td>保证依赖、权限、网络和进程可重放</td>
+      <td>Dockerfile、Apptainer <code class="language-plaintext highlighter-rouge">.def</code>、setup script</td>
+    </tr>
+    <tr>
+      <td>Verifier</td>
+      <td>把终态映射成 reward</td>
+      <td>pytest、unit tests、protocol checks</td>
+    </tr>
+    <tr>
+      <td>Trajectory</td>
+      <td>agent 与环境交互的 action/observation 序列</td>
+      <td>shell commands、stdout/stderr、teacher trace</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>最关键的是它定义了一个状态转换：</p>
+
+\[(\text{instruction}, s_0) \xrightarrow{\text{agent actions}} s_T\]
+
+<p>而 verifier 给出：</p>
+
+\[r = V(s_T)\]
+
+<p>如果 $V(s_0)=1$，测试是空的；如果正确解之后仍有 $V(s_T)=0$，测试或环境是错的；如果任务根本不可解，RL 只会看到没有信息量的全零 reward。</p>
+
+<p>因此环境合成的核心不是“生成更多题面”，而是让 instruction、initial state、runtime 和 verifier 共同指向同一个可观察的终态。</p>
+
+<hr />
+
+<h2 id="六篇论文总览">六篇论文总览</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Paper</th>
+      <th>Seed / 控制变量</th>
+      <th>Environment realization</th>
+      <th>Verification / filtering</th>
+      <th>Harness</th>
+      <th style="text-align: right">规模</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Endless Terminals</td>
+      <td>category × complexity × scenario</td>
+      <td>LLM 生成 initial tests + Docker/Apptainer，失败反馈最多 3 轮</td>
+      <td>final tests 初态必须失败；o3 pass@16 &gt; 0</td>
+      <td>自研极简 XML command loop；Docker 用 Harbor，实验用 Apptainer</td>
+      <td style="text-align: right">3,255</td>
+    </tr>
+    <tr>
+      <td>TMax</td>
+      <td>9 axes：domain、skill type、primitive skills、persona、language、task/command complexity、fixture、verifier</td>
+      <td>per-domain base image + per-task delta；单次生成 task/files/tests/image</td>
+      <td>只硬保 executability；policy pass rate=0 在 RL 时 soft filter</td>
+      <td>mini-SWE-agent 风格 Vanillux；Harbor；Apptainer/Podman</td>
+      <td style="text-align: right">14,600</td>
+    </tr>
+    <tr>
+      <td>SkillSynth</td>
+      <td>skill 的 pre/post scenario graph；path length 1–7</td>
+      <td>planner → constructor 生成 instruction、snapshot、container、tests、oracle</td>
+      <td>oracle execution + rubric judge；verify-repair</td>
+      <td>multi-agent synthesis harness；评测用 Terminus 2 + Harbor</td>
+      <td style="text-align: right">3,560 usable</td>
+    </tr>
+    <tr>
+      <td>Terminal-World</td>
+      <td>1K skills + 76 teams + 237 graphs × 4,973 personas</td>
+      <td>initial files / setup / pytest 各自 GVR，最多 3 轮</td>
+      <td>五维 task judge；文件一致性；setup probing；pytest 初态必须失败</td>
+      <td>teacher 为 DeepSeek-V3.2 + Terminus2；shared Debian sandbox</td>
+      <td style="text-align: right">5,723</td>
+    </tr>
+    <tr>
+      <td>CLI-Universe</td>
+      <td>domain × skill type × capability × engineering pillar，再做 real-world research</td>
+      <td>pull/adapt 或 synthesize assets；Docker assembly + smoke tests</td>
+      <td>rubric-gated tests；hint-free fail / hinted pass；strict fail-to-pass</td>
+      <td>trajectory teacher Kimi-K2.6；评测 Terminus 2</td>
+      <td style="text-align: right">6,000 trajectories</td>
+    </tr>
+    <tr>
+      <td>Terminal-Lego</td>
+      <td>StackOverflow accepted answer + vote filter；90+ domains</td>
+      <td>instruction → files → solution → difficulty → tests → Dockerfile 级联生成</td>
+      <td>AST syntax + 独立 LLM review，最多 3 轮；Docker solve→test reward &gt; 0</td>
+      <td>生成/验证用 Docker；trajectory 固定 Terminus-2 + tmux</td>
+      <td style="text-align: right">15K+ tasks / 15.3K trajectories</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>两个容易混淆的数字：</p>
+
+<ul>
+  <li>TMax 的正式名称是 <strong>TMax-15K</strong>，论文给出 <strong>14,600</strong> 个 RL environment instances。</li>
+  <li>CLI-Universe 的 <strong>6K</strong> 是最终训练 trajectory 数，不是论文披露的全部候选 environment 数；全流程只有 <strong>33.6%</strong> 候选保留。</li>
+</ul>
+
+<hr />
+
+<h2 id="endless-terminals最清楚的四阶段基线">Endless Terminals：最清楚的四阶段基线</h2>
+
+<h3 id="pipeline">Pipeline</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/endless-pipeline.png" alt="Endless Terminals 四阶段 environment synthesis pipeline" /></p>
+
+<p><em>原论文 Figure 1。四阶段依次是 task description、container setup、completion tests、solution filtering，最终产出 3,255 个 verified tasks，再用 binary episode reward 做 PPO。图中的 16 表示训练 turn budget；1.1% → 6.7% 是 Qwen3-8B 在 Terminal-Bench 2.0 上的迁移结果，不是环境过滤阈值。这条 pipeline 构成了最基础的坐标系：后续工作的复杂设计都可以看成在这四个位置增加新的控制变量或验证器。</em></p>
+
+<h4 id="stage-itask-description--privileged-truth">Stage I：Task description + privileged truth</h4>
+
+<p>每次 prompt 随机采样三个维度：</p>
+
+<ul>
+  <li>task category：file management、text processing、log analysis、git、database、security 等；</li>
+  <li>complexity：单命令到多步 workflow；</li>
+  <li>scenario context：developer、DevOps engineer、data analyst 等。</li>
+</ul>
+
+<p>LLM 同时输出：</p>
+
+<ul>
+  <li>给 agent 看的 task instruction；</li>
+  <li>agent 看不到的 privileged truth，包括路径、精确文件内容、期望终态。</li>
+</ul>
+
+<p>这里的关键不是 persona 本身，而是把“公开任务”和“私有验收信息”从一开始分开。</p>
+
+<h4 id="stage-iiinitial-state-test--container">Stage II：Initial-state test + container</h4>
+
+<p>输入 task description 与 truth，生成：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">test_initial_state.py</code>；</li>
+  <li>Dockerfile 或 Apptainer definition。</li>
+</ul>
+
+<p>执行闭环：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>generate container
+→ build
+→ run initial-state tests
+→ feed build/test error back to LLM
+→ retry, at most 3 rounds
+→ still failing: discard
+</code></pre></div></div>
+
+<p>initial-state tests 检查开始前必须存在的文件、目录、进程或 repository。它们不判断任务是否已经完成，只判断环境能不能开始。</p>
+
+<h4 id="stage-iiifinal-state-tests">Stage III：Final-state tests</h4>
+
+<p>第二份测试检查任务完成后的 filesystem / service / computed result。</p>
+
+<p>硬约束：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>final tests on initial state = fail
+</code></pre></div></div>
+
+<p>这一步消除最常见的 vacuous verifier：测试什么都没检查，初态也会通过。</p>
+
+<h4 id="stage-ivsolution-based-filtering">Stage IV：Solution-based filtering</h4>
+
+<p>用 o3 对每个任务独立尝试 16 次：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keep(task) iff pass@16 &gt; 0
+</code></pre></div></div>
+
+<p>它确认任务至少在当前强模型能力边界内可解，但也引入 teacher ceiling：所有 o3 解不出的任务都被丢弃，其中可能包含正确但更难的任务。</p>
+
+<h3 id="一条公开数据怎样对应四个阶段">一条公开数据怎样对应四个阶段</h3>
+
+<p>公开的 Harbor 格式数据里可以直接查看 <a href="https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d"><code class="language-plaintext highlighter-rouge">task_000000_00b7d96d</code></a>。这道题要求 agent 在 <code class="language-plaintext highlighter-rouge">/home/user/api-test</code> 中建立 Python virtual environment，安装指定版本的 <code class="language-plaintext highlighter-rouge">httpx</code> 与 <code class="language-plaintext highlighter-rouge">requests</code>，再生成内容严格匹配的 <code class="language-plaintext highlighter-rouge">requirements.txt</code> 和 <code class="language-plaintext highlighter-rouge">install.log</code>。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pipeline stage</th>
+      <th>这个样本中的 artifact</th>
+      <th>谁生成 / 表达什么</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>I. task description</td>
+      <td><a href="https://huggingface.co/datasets/obiwan96/endless-terminals/blob/main/task_000000_00b7d96d/instruction.md"><code class="language-plaintext highlighter-rouge">instruction.md</code></a></td>
+      <td>LLM 生成给 agent 看的公开任务：目录、包版本、文件内容和终态约束。privileged truth 不作为单独的公开字段交给 agent，而是被编译进环境与 verifier。</td>
+    </tr>
+    <tr>
+      <td>II. container setup</td>
+      <td><a href="https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d/environment"><code class="language-plaintext highlighter-rouge">environment/</code></a> 下的 <code class="language-plaintext highlighter-rouge">container.def</code>、<code class="language-plaintext highlighter-rouge">Dockerfile</code>、<code class="language-plaintext highlighter-rouge">test_initial_state.py</code></td>
+      <td><code class="language-plaintext highlighter-rouge">.def</code> 建立 Apptainer 初态；Dockerfile 是转成 Harbor 后的等价环境；initial test 检查 <code class="language-plaintext highlighter-rouge">/home/user</code>、Python/pip 等 prerequisite 已就绪，同时目标产物尚未被提前创建。</td>
+    </tr>
+    <tr>
+      <td>III. completion tests</td>
+      <td><a href="https://huggingface.co/datasets/obiwan96/endless-terminals/blob/main/task_000000_00b7d96d/tests/test_final_state.py"><code class="language-plaintext highlighter-rouge">tests/test_final_state.py</code></a> 与 <code class="language-plaintext highlighter-rouge">tests/test.sh</code></td>
+      <td>验证 venv、可执行文件、两个文本文件的精确内容，以及包确实装在该 venv 中；<code class="language-plaintext highlighter-rouge">test.sh</code> 把 pytest 结果写成 binary reward。</td>
+    </tr>
+    <tr>
+      <td>IV. solution filtering</td>
+      <td><a href="https://huggingface.co/datasets/obiwan96/endless-terminals/tree/main/task_000000_00b7d96d/solution"><code class="language-plaintext highlighter-rouge">solution/</code></a> 下的 <code class="language-plaintext highlighter-rouge">o3_summary.json</code></td>
+      <td>保存 o3 的交互尝试及成功统计；只要 16 次里至少一次通过 final tests，这条任务就被保留。</td>
+    </tr>
+    <tr>
+      <td>Harbor packaging</td>
+      <td><code class="language-plaintext highlighter-rouge">task.toml</code>、<code class="language-plaintext highlighter-rouge">solution/solve.sh</code>、目录布局</td>
+      <td>这些不是新的 synthesis stage，而是把已验证 task 包装成 Harbor 可调度、可复现执行的格式。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>作者仓库还公开了一个较轻量的 <a href="https://github.com/kanishkg/endless-terminals/blob/main/tasks.json"><code class="language-plaintext highlighter-rouge">tasks.json</code></a>，适合快速浏览 instruction、difficulty/category 与 CPU、内存、存储、timeout 等运行配置；完整环境 artifact 则看上面的 Hugging Face 目录。需要注意：Hugging Face 数据位于 <code class="language-plaintext highlighter-rouge">obiwan96</code> 账号，页面称其随论文发布且包含约 2,500 个 Harbor 环境，但论文作者的 GitHub README 没有反向链接它，因此这里将它标作<strong>公开数据镜像</strong>，不把账号归属说成作者官方。</p>
+
+<h3 id="dockerfileapptainerharbor-与-pty-不是同一层概念">Dockerfile、Apptainer、Harbor 与 PTY 不是同一层概念</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>名词</th>
+      <th>格式 / 作用</th>
+      <th>在 Endless Terminals 里的位置</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Dockerfile</td>
+      <td>按行写 image build 指令，常见语句是 <code class="language-plaintext highlighter-rouge">FROM</code>、<code class="language-plaintext highlighter-rouge">RUN</code>、<code class="language-plaintext highlighter-rouge">COPY</code>、<code class="language-plaintext highlighter-rouge">ENV</code>、<code class="language-plaintext highlighter-rouge">CMD</code>；构建结果通常是分层的 OCI/Docker image。</td>
+      <td>约 2,500 个任务被转换成 Docker/Harbor 格式，便于用通用 container backend 运行和评测。</td>
+    </tr>
+    <tr>
+      <td>Apptainer definition (<code class="language-plaintext highlighter-rouge">container.def</code>)</td>
+      <td>header 指定 <code class="language-plaintext highlighter-rouge">Bootstrap</code> / <code class="language-plaintext highlighter-rouge">From</code>，正文按 <code class="language-plaintext highlighter-rouge">%post</code>、<code class="language-plaintext highlighter-rouge">%files</code>、<code class="language-plaintext highlighter-rouge">%environment</code>、<code class="language-plaintext highlighter-rouge">%runscript</code> 等 section 组织；构建结果通常是单文件 <code class="language-plaintext highlighter-rouge">.sif</code> image。</td>
+      <td>论文得到 3,255 个 Apptainer task，并用这条路径完成全部训练实验。Apptainer 常见于 HPC，可在没有常驻 Docker daemon 的环境里以普通用户运行。</td>
+    </tr>
+    <tr>
+      <td>Harbor</td>
+      <td>terminal-agent 的 environment / task orchestration 与 evaluation harness，不是这里所说的 Docker 镜像仓库产品 Harbor。它负责按 <code class="language-plaintext highlighter-rouge">instruction.md + environment/ + tests/ + task.toml</code> 启动容器、连接 agent、运行 verifier、收集结果。</td>
+      <td>论文的 Docker 路径交给 Harbor；作者仓库也提供 Harbor adapter 和并行评测脚本。</td>
+    </tr>
+    <tr>
+      <td>PTY</td>
+      <td>pseudo-terminal，给进程提供“像真的交互式终端一样”的输入输出通道；它不是 image 格式。PTY 能保留 TTY 检测、shell prompt、信号和交互语义。</td>
+      <td>Apptainer 路径用一个 persistent PTY shell；同一 episode 的多轮 command 共享 filesystem、环境变量和后台进程状态。</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>所以“Docker 用 Harbor、Apptainer 用 PTY”不能理解成两组同类替代品。更准确的分层是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>image/runtime layer:  Docker/OCI image       | Apptainer .sif
+orchestration layer:  Harbor framework       | authors' custom persistent session
+interaction channel:  environment.exec(...)  | PTY-backed interactive shell
+</code></pre></div></div>
+
+<p>格式细节可对照 <a href="https://docs.docker.com/reference/dockerfile">Dockerfile reference</a>、<a href="https://apptainer.org/user-docs/master/definition_files.html">Apptainer definition files</a> 与 <a href="https://www.harborframework.com/docs/tasks">Harbor task structure</a>。</p>
+
+<h3 id="prompt-和-harness-到底长什么样">Prompt 和 harness 到底长什么样</h3>
+
+<p>论文没有在正文逐字列出生成 prompt，也<strong>没有披露 Stage I–III 使用的具体生成模型</strong>：正文始终只写 “a language model” 或 “the model”。它唯一明确命名的生成阶段模型是 Stage IV 的 o3，用于 16 次 solvability-filter 尝试。</p>
+
+<p>这里还要区分两种 trajectory：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">o3</code> 产生的是数据进入训练前的<strong>过滤 trajectory</strong>，作用是判定任务是否至少可解一次；</li>
+  <li>PPO 阶段的 16 rollouts / prompt 是当前被训练 policy 的 <strong>on-policy trajectory</strong>，不是拿 o3 trajectory 做 RL。</li>
+</ul>
+
+<p>当前开源实现把生成模型做成可配置参数；README 的复现命令示例对 task generation 和 solution generation 都填写 <code class="language-plaintext highlighter-rouge">Qwen/Qwen3-32B</code>。这说明<strong>代码可以用 Qwen3-32B 重跑</strong>，不能反推论文中的 3,255 条原始环境就是由它生成的。</p>
+
+<p>代码仓公开了主要 prompt 与文件结构，可以直接跳到：</p>
+
+<ul>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/generator/task_template_gen.py#L21-L85">Stage I task + privileged truth prompt</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/generator/initial_state_test_gen.py#L17-L43">Stage II initial-state test prompt</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/generator/apptainer_def_gen.py#L34-L93">Stage II Apptainer definition prompt</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/generator/completion_test_gen.py#L44-L72">Stage III final-state test prompt</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/generator/sample_solutions.py#L29-L60">Stage IV solution-agent prompt</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/tree/main/generator">全部 generator 源码目录</a></li>
+</ul>
+
+<p>其核心约束是：</p>
+
+<ul>
+  <li>public task 要像用户请求；</li>
+  <li>truth 要列清路径、内容和 expected state；</li>
+  <li>initial test 只检查 prerequisite，不能检查输出；</li>
+  <li>final test 从 truth 构造；</li>
+  <li>container build error 会回填给生成模型。</li>
+</ul>
+
+<p>Agent interaction loop 非常小：</p>
+
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>reasoning...
+<span class="nt">&lt;command&gt;</span>one shell command<span class="nt">&lt;/command&gt;</span>
+</code></pre></div></div>
+
+<p>完成时输出：</p>
+
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;command&gt;</span>done<span class="nt">&lt;/command&gt;</span>
+</code></pre></div></div>
+
+<p>每轮把 stdout、stderr、exit code 追加回历史。训练最多 16 turns / 16K context；评测可到 64 turns。论文主实验使用 persistent Apptainer PTY；Docker/Harbor 是另一条受支持的执行与评测路径。</p>
+
+<h3 id="公开实现与数据链接">公开实现与数据链接</h3>
+
+<ul>
+  <li><a href="https://arxiv.org/html/2601.16443">论文 HTML</a> / <a href="https://arxiv.org/abs/2601.16443">arXiv abstract</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals">作者代码仓库</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/blob/main/tasks.json">作者仓库中的 task 索引 <code class="language-plaintext highlighter-rouge">tasks.json</code></a></li>
+  <li><a href="https://huggingface.co/datasets/obiwan96/endless-terminals">公开 Hugging Face 环境镜像（约 2,500 个 Harbor task bundles）</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals/tree/main/generator">generation prompts</a></li>
+</ul>
+
+<h3 id="最值得带走的点">最值得带走的点</h3>
+
+<p>Endless 的设计原则是：</p>
+
+<blockquote>
+  <p>generator 可以犯错，但每一阶段必须有一个机器可执行的局部验收信号。</p>
+</blockquote>
+
+<p>它的问题也很直接：</p>
+
+<ul>
+  <li>pass@16 过滤成本高；</li>
+  <li>“至少一次成功”确认可解，不保证 verifier 与自然语言完全对齐；</li>
+  <li>任务分布容易像竞赛题，而不像模糊的真实请求；</li>
+  <li>最终数据对强模型偏容易：TMax 后续测得 Gemini-3-Flash 在 Endless 上 pass@1 很高。</li>
+</ul>
+
+<hr />
+
+<h2 id="tmax从多阶段严审转向正交轴--soft-filtering">TMax：从“多阶段严审”转向“正交轴 + soft filtering”</h2>
+
+<h3 id="九个轴怎样组成任务">九个轴怎样组成任务</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/tmax-pipeline.png" alt="TMax 九轴 compositional data pipeline" /></p>
+
+<p><em>原论文 Figure 2。左侧九个轴先组成 task signature，Gemini-3-Pro 再一次性实例化 source files、Dockerfile、unit tests 和 instruction；任务构建在 per-domain pre-built base image 上，并通过 mini-SWE-agent 风格 harness 提供交互。这个 single-build 设计省掉了昂贵的 teacher solvability validation，把规模化重点放在组合采样与 executability。</em></p>
+
+<p>TMax 的九个采样轴：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Axis</th>
+      <th>Cardinality / 示例</th>
+      <th>控制什么</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Domain</td>
+      <td>9：security、SWE、file ops、data querying…</td>
+      <td>主题覆盖</td>
+    </tr>
+    <tr>
+      <td>Skill type</td>
+      <td>每个 domain 4–7 类</td>
+      <td>知识类型</td>
+    </tr>
+    <tr>
+      <td>Primitive skills</td>
+      <td>每个 domain 20–40；每题采 3–5 个</td>
+      <td>组合能力</td>
+    </tr>
+    <tr>
+      <td>Persona</td>
+      <td>每个 domain 6–18 个</td>
+      <td>使用场景</td>
+    </tr>
+    <tr>
+      <td>Language</td>
+      <td>Python、C、Bash、C++、Rust、Go、multi-language、any</td>
+      <td>实现分布</td>
+    </tr>
+    <tr>
+      <td>Task complexity</td>
+      <td>short / moderate / complex / intricate</td>
+      <td>workflow 长度</td>
+    </tr>
+    <tr>
+      <td>Command complexity</td>
+      <td>bash-only / bash+code / bash+code+services</td>
+      <td>action space</td>
+    </tr>
+    <tr>
+      <td>Fixture</td>
+      <td>text、image、audio、video、binary、vendored package、multi-service</td>
+      <td>输入形态</td>
+    </tr>
+    <tr>
+      <td>Verifier</td>
+      <td>exact text、metric、adversarial、fuzz、multi-protocol</td>
+      <td>reward 形态</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>它的采样并非简单笛卡尔积。九个轴定义的是任务分布的<strong>坐标系</strong>，代码并不会枚举所有组合，而是为每个任务执行一次有条件、有权重的顺序采样。完整实现可跳转到 <a href="https://github.com/hamishivi/tmax/blob/master/rl_data/generator/task_template_gen.py#L1190-L1295"><code class="language-plaintext highlighter-rouge">random_user_msg</code></a>，v2 的 bucket weighting 在 <a href="https://github.com/hamishivi/tmax/blob/master/rl_data/generator/task_template_gen.py#L612-L685"><code class="language-plaintext highlighter-rouge">_bucket_upweight_choice</code></a>。</p>
+
+<p>具体过程是：</p>
+
+<ol>
+  <li>从 9 个 domain 中均匀抽取一个；</li>
+  <li>只从该 domain 内抽一个 <code class="language-plaintext highlighter-rouge">skill_type</code>；</li>
+  <li>将该 domain 下<strong>所有</strong> skill type 的 primitive skills 合并，再无放回抽取 3–5 个；</li>
+  <li>从该 domain 对应的 persona/scenario 池采样，而不是从全局 persona 池采样；</li>
+  <li>以 0.35 概率加入一个 real-software anchor，例如 “JWT implementation accepts <code class="language-plaintext highlighter-rouge">algorithm=none</code>”；</li>
+  <li>按人工权重抽语言，而非均匀抽样：Python 0.35，C/Bash 各 0.15，C++ 0.10，Rust/Go 各 0.07；</li>
+  <li>根据 <code class="language-plaintext highlighter-rouge">corpus_kind</code> 再决定 complexity、fixture 和 verifier 的分布。</li>
+</ol>
+
+<p>这里有个容易忽略的细节：<code class="language-plaintext highlighter-rouge">skill_type</code> 是任务的主类别，但 primitive skills 并不局限于这个 skill type，而是可跨同一 domain 下的其他类别。例如一题的主类别可以是 <code class="language-plaintext highlighter-rouge">Algorithmic</code>，同时组合 token validation、authentication testing 和 reverse engineering。这比在固定小类里机械拼接更容易产生跨技能 workflow。</p>
+
+<p><code class="language-plaintext highlighter-rouge">rl_v2</code> 的 weighting 也不是笼统的“多采一点难题”：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Axis</th>
+      <th>5k <code class="language-plaintext highlighter-rouge">rl_v2</code> 内部采样</th>
+      <th>与 10k legacy 合并后的 15k 分布</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Task complexity</td>
+      <td><code class="language-plaintext highlighter-rouge">intricate</code> 概率 75%；其余三个难度共享 25%</td>
+      <td>short / moderate / complex / intricate 各约 25%</td>
+    </tr>
+    <tr>
+      <td>Verifier</td>
+      <td>不再抽 <code class="language-plaintext highlighter-rouge">exact_text</code>；四种新 verifier 均匀采样</td>
+      <td><code class="language-plaintext highlighter-rouge">exact_text</code> 约 66.7%；四种新 verifier 各约 8.3%</td>
+    </tr>
+    <tr>
+      <td>Fixture</td>
+      <td>不再抽 <code class="language-plaintext highlighter-rouge">text_only</code>；六种新 fixture 均匀采样</td>
+      <td><code class="language-plaintext highlighter-rouge">text_only</code> 约 66.7%；六种新 fixture 各约 5.6%</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>因此，“九轴组合”更准确地说是一个 factorized but conditional distribution：domain 决定 skill/persona 候选池，<code class="language-plaintext highlighter-rouge">corpus_kind</code> 决定新旧 bucket 的概率，抽出的 signature 再交给 LLM 实例化。即使 signature 相同，LLM 仍可能生成不同的 task。任何新型 fixture/verifier，或 complexity 为 <code class="language-plaintext highlighter-rouge">intricate</code> 的任务，都会路由到预装 OCR、ffmpeg、binutils 和科学计算库的 <code class="language-plaintext highlighter-rouge">base_intricate</code> image。</p>
+
+<h3 id="prompt-contract">Prompt contract</h3>
+
+<p>TMax 代码公开的 task generator prompt 可以压缩成下面这份 field contract：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>System:
+  role = domain-specific task builder
+  requirements = challenging, programmatically verifiable, self-contained, realistic
+  output = &lt;task&gt; public instruction &lt;/task&gt;
+           &lt;truth&gt; privileged verification data &lt;/truth&gt;
+
+User:
+  skill_type
+  primary_language
+  3–5 primitive_skills
+  task_complexity
+  command_complexity
+  persona/scenario
+  optional real-software anchor
+  verifier_kind
+  fixture_kind
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">&lt;truth&gt;</code> 不是给 agent 看的标准答案，也不是 SFT 的 target；它更像 task generator 与 verifier generator 之间的 <strong>privileged rubric / intermediate representation</strong>。它不是严格 JSON schema，而是一段半结构化文本，所以不同任务里的内容可能差异很大：有时是预期文件与数值，有时包括 setup procedure，有时主要是 verifier configuration。</p>
+
+<p>它必须声明：</p>
+
+<ul>
+  <li>exact paths；</li>
+  <li>setup 前应存在的对象；</li>
+  <li>agent 应创建的对象；</li>
+  <li>对 derived value 的可复现计算过程；</li>
+  <li>verifier-specific parameters。</li>
+</ul>
+
+<p>例如：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">metric_threshold</code>：metric 公式、reference、threshold、output path；</li>
+  <li><code class="language-plaintext highlighter-rouge">adversarial_corpus</code>：evil/clean corpus 路径、双向 pass criterion、entry point；</li>
+  <li><code class="language-plaintext highlighter-rouge">fuzz_equivalence</code>：oracle path、input distribution、N、agent executable；</li>
+  <li><code class="language-plaintext highlighter-rouge">multi_protocol</code>：host:port、protocol request/response、credentials。</li>
+</ul>
+
+<p>final-test generator 会同时读取 <code class="language-plaintext highlighter-rouge">description</code>、<code class="language-plaintext highlighter-rouge">truth</code> 与 initial-state test，再生成 <code class="language-plaintext highlighter-rouge">test_final_state.py</code>。但它也被明确要求：把 truth 当作 rubric 的<strong>意图</strong>，而不是无条件可信的常数；如果 expected value 可以从输入重新计算，就应在 verifier 中重新计算，而不是直接复制 opaque literal。对应代码见 <a href="https://github.com/hamishivi/tmax/blob/master/rl_data/generator/completion_test_gen.py"><code class="language-plaintext highlighter-rouge">completion_test_gen.py</code></a>。</p>
+
+<p>然后独立生成：</p>
+
+<ol>
+  <li>initial-state pytest；</li>
+  <li>final-state pytest；</li>
+  <li>per-task Apptainer definition；</li>
+  <li>build + smoke test。</li>
+</ol>
+
+<p>公开实现默认 task prompt <code class="language-plaintext highlighter-rouge">temperature=1.0</code>，initial/final test prompt <code class="language-plaintext highlighter-rouge">temperature=0.6</code>，每次最多 2,048 tokens。</p>
+
+<h3 id="一个真实-task从-signature-到-reward">一个真实 task：从 signature 到 reward</h3>
+
+<p>公开的 <a href="https://huggingface.co/datasets/TMaxxx/TMax-15K"><code class="language-plaintext highlighter-rouge">TMax-15K</code> 数据集</a>直接保留了 <code class="language-plaintext highlighter-rouge">description</code>、<code class="language-plaintext highlighter-rouge">truth</code>、initial/final test 和 container definition。以 <a href="https://huggingface.co/datasets/TMaxxx/TMax-15K/viewer/default/train?row=9"><code class="language-plaintext highlighter-rouge">task_000004_b4949f3f</code></a> 为例：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">domain</span><span class="pi">:</span> <span class="s">scientific_computing</span>
+<span class="na">skill_type</span><span class="pi">:</span> <span class="s">Data Processing</span>
+<span class="na">task_complexity</span><span class="pi">:</span> <span class="s">intricate</span>
+<span class="na">command_complexity</span><span class="pi">:</span> <span class="s">bash-only</span>
+<span class="na">scenario</span><span class="pi">:</span> <span class="s">data scientist fitting models</span>
+<span class="na">language</span><span class="pi">:</span> <span class="s">Python</span>
+<span class="na">fixture_kind</span><span class="pi">:</span> <span class="s">audio</span>
+<span class="na">verifier_kind</span><span class="pi">:</span> <span class="s">metric_threshold</span>
+</code></pre></div></div>
+
+<p>它不只是一个文本问答，而是完整环境任务：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>input fixture:
+  /app/chime_recording.wav
+  一段包含噪声的钟声音频
+
+public task:
+  估计三个衰减正弦分量的参数，并重建干净信号
+
+required output:
+  /home/user/reconstructed.wav
+</code></pre></div></div>
+
+<p>其 privileged truth 声明的不是唯一 waveform，而是验收协议：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">metric</span><span class="pi">:</span> <span class="s">normalized signal MSE</span>
+<span class="na">threshold</span><span class="pi">:</span> <span class="s">MSE &lt;= </span><span class="m">0.02</span>
+<span class="na">reference_path</span><span class="pi">:</span> <span class="s">/app/chime_recording.wav</span>
+<span class="na">evaluated_path</span><span class="pi">:</span> <span class="s">/home/user/reconstructed.wav</span>
+<span class="na">metric_implementation</span><span class="pi">:</span>
+  <span class="s">使用 scipy 读取两个 WAV，归一化振幅后计算 mean((x - y) ** 2)</span>
+</code></pre></div></div>
+
+<p>initial-state test 先确认输入音频存在；final-state test 再确认 agent 创建了目标文件，读取两段音频，重新计算 MSE 并检查是否不超过 0.02。也就是说，<code class="language-plaintext highlighter-rouge">truth</code> 被“编译”成 verifier，而不是直接显示给 agent。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sampled signature
+  → LLM: public description + privileged truth
+  → fixture + initial-state test + container
+  → LLM: truth-aware final-state pytest
+  → agent only receives public task + terminal environment
+  → harness runs final-state pytest
+  → all checks pass: reward = 1; otherwise reward = 0
+</code></pre></div></div>
+
+<p>生成阶段单个任务的目录为：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>task_xxx/
+├── task.json
+├── test_initial_state.py
+├── test_final_state.py
+├── container.def
+├── setup.sh
+├── fixtures/
+└── solutions/
+</code></pre></div></div>
+
+<p>原始公开数据则把它展平成一行，包含 <code class="language-plaintext highlighter-rouge">task_id</code>、九轴 metadata、<code class="language-plaintext highlighter-rouge">description</code>、<code class="language-plaintext highlighter-rouge">truth</code>、<code class="language-plaintext highlighter-rouge">test_initial_state</code>、<code class="language-plaintext highlighter-rouge">test_final_state</code> 和 <code class="language-plaintext highlighter-rouge">container_def</code>；转换成 Harbor task 后，agent-visible instruction 与隐藏 tests/verifier 分开交给 harness。</p>
+
+<h3 id="graded-verifier-为什么比-exact-text-更重要">Graded verifier 为什么比 exact text 更重要</h3>
+
+<p>TMax 不只问“最终文件是否一字不差”，而是把难度做进 verifier：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Verifier</th>
+      <th>truth 中需要提供什么</th>
+      <th>verifier 如何检查</th>
+      <th>难度旋钮</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">exact_text</code></td>
+      <td>预期文本、文件结构或 checksum</td>
+      <td>与确定性 expected state 比较</td>
+      <td>无</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">metric_threshold</code></td>
+      <td>metric 算法、reference/target、threshold、output path</td>
+      <td>计算 SSIM、MSE、accuracy、speedup 等，再判断是否过线</td>
+      <td>threshold</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adversarial_corpus</code></td>
+      <td>evil/clean 路径、双向 criterion、entry point</td>
+      <td>evil 必须拒绝/净化，clean 必须接受/保留</td>
+      <td>corpus size / pass rate</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">fuzz_equivalence</code></td>
+      <td>oracle path、输入分布、N、agent executable</td>
+      <td>固定随机种子，逐个运行 oracle 与 agent 并比较输出</td>
+      <td>N / input distribution</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">multi_protocol</code></td>
+      <td>host:port、request/response、credentials</td>
+      <td>发出真实 HTTP/TCP/gRPC/SMTP 请求并检查响应</td>
+      <td>protocol / condition 数</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这里的 “graded” 容易让人误以为 RL 获得连续分数。实际上 TMax 的 outcome-only RL 最终仍使用二值 reward：<code class="language-plaintext highlighter-rouge">metric_threshold</code> 内部可以得到连续的 MSE/SSIM，<code class="language-plaintext highlighter-rouge">adversarial_corpus</code> 可以得到通过率，但 verifier 最后仍把它们按 criterion 转成 pass/fail。它比单纯增加 prompt 长度更可靠，是因为它改变了<strong>验收语义和 reward boundary</strong>，而不是因为 reward 本身变成连续值。</p>
+
+<h3 id="为什么-tmax-敢跳过-teacher-filter">为什么 TMax 敢跳过 teacher filter</h3>
+
+<p>TMax 只要求：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>container builds + tests execute
+</code></pre></div></div>
+
+<p>它不在数据生成时证明：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a strong teacher can solve the task
+</code></pre></div></div>
+
+<p>理由是训练时每个 prompt 会有一组 rollout；如果 policy 对这个任务全部失败，group reward 标准差为零，不产生有效梯度，于是直接在 RL batching 阶段过滤。</p>
+
+<p>这是一种非常不同的成本分配：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Endless: generation-time hard filtering
+TMax:    training-time soft filtering
+</code></pre></div></div>
+
+<p>优点是便宜、吞吐高；风险是 container 可执行不等于 task 与 verifier 语义正确，错误环境仍可能消耗 rollout compute。</p>
+
+<h3 id="harness">Harness</h3>
+
+<p>TMax 使用 mini-SWE-agent 风格的 <strong>Vanillux2Agent</strong>：</p>
+
+<ul>
+  <li>bash tool schema；</li>
+  <li>submit marker；</li>
+  <li>tool-format error recovery；</li>
+  <li>output truncation；</li>
+  <li>在 Harbor active environment 里执行。</li>
+</ul>
+
+<p>训练基础设施是 open-instruct + vLLM，sandbox backend 使用 Podman 或 Apptainer；公开 Harbor 数据也可跑在 Docker 或 Daytona。论文还比较了自身 harness、OpenHands、mini-SWE-agent、Terminus-2，说明 RL gain 能跨 harness 转移，但最好分数仍出现在训练时相近的 harness。</p>
+
+<hr />
+
+<h2 id="skillsynth不只控制-task-diversity还控制-trajectory-diversity">SkillSynth：不只控制 task diversity，还控制 trajectory diversity</h2>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure2-overview.png" alt="SkillSynth 从 skill graph 到可执行任务的总体流程" /></p>
+
+<p><em>原论文 Figure 2。左侧从 scenario-mediated skill graph 采样一条有方向的 skill path；中间由 planner 与 constructor 把 path 实例化为环境、题面、测试和 oracle solution，并在执行验证、rubric 验证失败后进入 repair loop；右侧才是可训练的 terminal task。后文的 graph construction、path sampling 和 multi-agent harness 分别对应这张图的三个关键接口。</em></p>
+
+<h3 id="为什么随机拼-skills-不够">为什么随机拼 skills 不够</h3>
+
+<p>假设从技能池随机抽：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>OCR + Kubernetes + PDF table extraction + TLS certificate
+</code></pre></div></div>
+
+<p>LLM 也许能写出一个题面，但四个技能未必形成因果 workflow。最终 constructor 常把它们降级成并列 checklist，实际解题路径仍很短。</p>
+
+<p>SkillSynth 的核心变化是把 skill 表成状态转换：</p>
+
+\[\kappa: \sigma_{\text{pre}} \rightarrow \sigma_{\text{post}}\]
+
+<p>其中：</p>
+
+<ul>
+  <li>scenario 是某一决策点的环境语义状态；</li>
+  <li>skill 是把一个 scenario 转成下一个 scenario 的多步 workflow。</li>
+</ul>
+
+<h3 id="skill-graph-construction">Skill graph construction</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-graph-pipeline.png" alt="SkillSynth 的 skill graph construction pipeline" /></p>
+
+<p><em>原论文 Figure 3。raw skills 先过滤，再为每个 skill 推断 pre/post scenarios；scenario 经聚类、合并与去重后，pre-cluster 与 post-cluster 做双向语义对齐，最后构造由 pre-scenario、skill、post-scenario 组成的 graph。这里的 scenario node 是连接不同 skill、形成连续 workflow path 的关键中介。</em></p>
+
+<p>数据源来自 ClawHub 与 public GitHub skills，先过滤：</p>
+
+<ol>
+  <li>可在 Linux terminal 执行；</li>
+  <li>是结构化 workflow，不只是 prompt engineering；</li>
+  <li>没有 adversarial / jailbreak 行为；</li>
+  <li>输出 deterministic、objectively verifiable。</li>
+</ol>
+
+<p>之后分五步：</p>
+
+<ol>
+  <li><strong>Scenario inference</strong>：输入 skill 的 Markdown、code、examples，推断多个 pre/post scenarios。</li>
+  <li><strong>Scenario dedup</strong>：embedding 后两阶段聚类；Louvain coarse buckets + complete-linkage agglomerative clustering。</li>
+  <li><strong>Cross-skill alignment</strong>：每个 post scenario 检索最相似的 1,000 个 pre scenarios，再由 LLM 判断兼容性；反向再做一次。</li>
+  <li><strong>Scenario merge</strong>：把兼容的 pre/post 合成统一 node。</li>
+  <li><strong>Triple filter</strong>：再次判断 <code class="language-plaintext highlighter-rouge">(scenario, skill, scenario)</code> 是否真是有效转换。</li>
+</ol>
+
+<h4 id="scenario-clustering-到底在做什么">Scenario clustering 到底在做什么</h4>
+
+<p>论文说比较了 <strong>9 种常见聚类算法</strong>，最终选择“两阶段聚类”；正文和附录没有逐项列出这 9 种算法的名称，因此这里不补猜测名单。选中的流程是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scenario text
+→ embedding + normalization
+→ sparse semantic-similarity graph
+→ Louvain：先切成 coarse buckets
+→ bucket 内 complete-linkage agglomerative clustering
+→ threshold sweep + held-out 人工检查
+</code></pre></div></div>
+
+<ul>
+  <li><strong>Louvain</strong> 把 scenario 当作图节点、相似度当作边，通过提高 modularity，把“内部连接显著更密”的节点先分到同一 community。它不需要预先指定 cluster 数，作用是把全局问题切成较小的候选桶。</li>
+  <li><strong>Agglomerative clustering</strong> 从“每个 scenario 自成一类”开始，不断合并距离最近的两个 cluster。</li>
+  <li><strong>Complete linkage</strong> 用两个 cluster 中“最远的那一对样本”定义 cluster 间距离。因此只有当两组里的所有 scenario 都足够接近时才会合并；它能避免 single linkage 的 chain drift：<code class="language-plaintext highlighter-rouge">A≈B，B≈C</code>，但 <code class="language-plaintext highlighter-rouge">A</code> 与 <code class="language-plaintext highlighter-rouge">C</code> 已经不是同一个状态。</li>
+  <li>使用 <strong>cosine distance</strong>，并在 held-out scenarios 上 sweep threshold、人工检查。目标是在“合并措辞不同的同义状态”与“保留 negation、pre/post condition 改变造成的真实差异”之间取平衡。</li>
+</ul>
+
+<p>为什么要分两段？对 8 万级 scenario 直接做全局 hierarchical clustering 会产生近似全对全的距离与二次内存开销；Louvain 先粗分桶，让 complete linkage 只在局部做严格去重。</p>
+
+<p>最终图规模：</p>
+
+<ul>
+  <li>82,073 scenario nodes；</li>
+  <li>57,214 skill-labeled transitions；</li>
+  <li>6,251 connected components；</li>
+  <li>giant component 覆盖 85.6% nodes；</li>
+  <li>median degree 2，max degree 752。</li>
+</ul>
+
+<details>
+  <summary><strong>展开：附录中的 graph coverage 与 degree distribution</strong></summary>
+
+  <p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure5-categories.png" alt="SkillSynth 附录 Figure 5：skill category distribution" /></p>
+
+  <p><em>Figure 5 表明图并不只覆盖 coding、automation、document processing 等高频 terminal 工作，也包含 audio、3D、legal、health、IoT 等长尾类别。类别覆盖只是静态 diversity；真正用于训练的数据还需要 path sampler 把这些节点采到。</em></p>
+
+  <p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure6-degree.png" alt="SkillSynth 附录 Figure 6：node degree 的 CCDF" /></p>
+
+  <p><em>Figure 6 是 degree 的 complementary CDF，横纵轴均为 log scale。degree 呈明显 heavy tail：median 为 2，而最大 hub 为 752。少数 hub 会被普通 random walk 反复穿过，这正是后面 inverse-frequency sampling 的直接动机。</em></p>
+
+  <p>论文还报告图中可枚举出 <strong>16,632,220 条至少需要 7 个 skills 的路径</strong>。这说明图本身提供了很大的组合空间，但并不意味着每条路径都自然、可构造或可验证；后续 sampler 与 harness 仍承担质量控制。</p>
+
+</details>
+
+<h3 id="path-sampling">Path sampling</h3>
+
+<p>采样 path：</p>
+
+\[\mathcal{P}=(\sigma_0,\kappa_1,\sigma_1,\ldots,\kappa_L,\sigma_L), \quad 1 \le L \le 7\]
+
+<p>不使用 uniform random walk，因为 hub scenario 会被重复访问。SkillSynth 维护：</p>
+
+<ul>
+  <li>scenario visit count $\nu(\sigma)$；</li>
+  <li>skill usage count $\mu(\kappa)$。</li>
+</ul>
+
+<p>采样概率与历史频次成反比：</p>
+
+\[p(\sigma)\propto(\nu(\sigma)+1)^{-1},\qquad
+p(\kappa)\propto(\mu(\kappa)+1)^{-1}\]
+
+<p>同一路径中不重复 scenario 或 skill，保证 monotone progression。这样控制的是训练轨迹中最低必要技能序列，而不只是题目关键词的覆盖率。</p>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-algorithm1-path-sampling.png" alt="SkillSynth 原论文 Algorithm 1：Inverse-Frequency Path Sampling" /></p>
+
+<p><em>原论文 Algorithm 1，已按算法框精确裁剪。算法先按 $1/(\nu+1)$ 选择较少访问的起点；每一步只考虑未使用的 skill 与未访问的 post-scenario，再分别按 $1/(\mu+1)$、$1/(\nu+1)$ 降低高频项的概率。到达 $L_{\max}=7$ 或 dead end 时停止；只有长度合法且 skill set 未出现过的 path 才被接受，计数器也只在接受后更新。</em></p>
+
+<p>这里有三个容易忽略的设计：</p>
+
+<ol>
+  <li><strong>反频率不是绝对去重</strong>：高频节点仍可被采到，只是概率逐渐降低。</li>
+  <li><strong>monotone progression 是 path 内约束</strong>：同一条 path 不走回已经访问的 scenario，也不复用 skill，避免循环和“换个说法做同一步”。</li>
+  <li><strong>skill-set uniqueness 是 path 间约束</strong>：如果一条新 path 使用的 skill 集合已经见过，即使 scenario 顺序不同也不进入结果集；它把预算优先留给新的能力组合。</li>
+</ol>
+
+<details>
+  <summary><strong>展开：一条 graph path 如何变成具体任务</strong></summary>
+
+  <p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure4-example.png" alt="SkillSynth 附录 Figure 4：video 到 GIF 的组合任务实例" /></p>
+
+  <p><em>Figure 4 展示一条三-skill 路径：raw video → active video editing session → extracted frames with timestamps → generated GIF with output metadata。下半部分把每个抽象 skill 展开成 5 步 workflow。这个例子说明 graph path 不是把三个关键词塞进题面，而是要求前一步产物成为后一步的前置状态。</em></p>
+
+</details>
+
+<h3 id="multi-agent-synthesis-harness">Multi-agent synthesis harness</h3>
+
+<p>每条 path 变成五类产物：</p>
+
+<ol>
+  <li>natural-language instruction；</li>
+  <li>initial filesystem snapshot；</li>
+  <li>containerized environment；</li>
+  <li>verification scripts；</li>
+  <li>oracle solution。</li>
+</ol>
+
+<p>Harness 分工：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>skill-graph path
+→ planner：sub-objectives + expected outputs
+→ constructor：materialize all task artifacts
+→ oracle execution check
+→ rubric judge:
+     instruction ↔ tests alignment
+     instruction self-containedness
+→ failed: diagnostic feedback → constructor repair
+</code></pre></div></div>
+
+<p>两道 verification 的职责不同：</p>
+
+<ul>
+  <li><strong>execution verification</strong>：在 Harbor container 中执行 oracle solution，再运行 tests，回答“任务是否真的可解、测试能否跑通”；</li>
+  <li><strong>rubric evaluation</strong>：检查 instruction 与 tests 是否一致、题面是否 self-contained、是否泄露 oracle，回答“即使能跑，这个 reward 是否定义正确”。</li>
+</ul>
+
+<p>一轮运行从 3,721 paths 得到：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Verification outcome</th>
+      <th style="text-align: right">数量</th>
+      <th style="text-align: right">比例</th>
+      <th>后续用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Oracle + rubric 都通过</td>
+      <td style="text-align: right">3,423</td>
+      <td style="text-align: right">92.0%</td>
+      <td>SFT；也可用于 RL</td>
+    </tr>
+    <tr>
+      <td>Oracle 通过、rubric 未通过</td>
+      <td style="text-align: right">137</td>
+      <td style="text-align: right">3.7%</td>
+      <td><strong>保留给 SFT，RL 丢弃</strong></td>
+    </tr>
+    <tr>
+      <td>Oracle 未通过</td>
+      <td style="text-align: right">161</td>
+      <td style="text-align: right">4.3%</td>
+      <td>不作为 usable task</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>因此 oracle pass rate 是 95.7%，usable tasks 为 3,560。平均 repair 2.31 cycles、11 tool calls；721 个首轮失败任务被修回。rubric failure 中 <strong>77% 来自 instruction-test misalignment</strong>，说明“oracle 能解”并不能替代 reward specification 检查。</p>
+
+<p>“保留对的和错的一起训练”需要精确理解：论文保留的是 <strong>oracle 可执行、但 rubric judge 认为 specification 有问题</strong>的 137 个实例，用于 SFT 保留 trajectory diversity；它们不进入 RL，因为错误 tests/rubric 会提供错误 reward。论文并不是把所有执行失败的 rollout 都无条件混入训练。</p>
+
+<p>论文没有在主文明确写出允许的最大 repair cycles/tool calls 数值，因此这里不推断未披露的上限。</p>
+
+<h3 id="prompt-披露边界">Prompt 披露边界</h3>
+
+<p>论文公开了：</p>
+
+<ul>
+  <li>graph construction 的准则；</li>
+  <li>trajectory → scenario/skill 的抽取 prompt；</li>
+  <li>embedding query 格式。</li>
+</ul>
+
+<p>它没有完整公开 planner / constructor 的逐字 task synthesis prompt。因此可以复述 artifact schema 与 verify-repair control flow，但不能声称拿到了完整可复现 prompt。</p>
+
+<h3 id="harness-与评测">Harness 与评测</h3>
+
+<ul>
+  <li>task synthesis：自研 multi-agent harness；</li>
+  <li>task difficulty：Hy3 Preview 每题尝试 3 次；</li>
+  <li>evaluation agent：Terminus 2；</li>
+  <li>orchestration：Harbor；</li>
+  <li>128 个并发 Docker environments。</li>
+</ul>
+
+<h4 id="生成数据的难度分布">生成数据的难度分布</h4>
+
+<p>Hy3 Preview 对每题独立尝试 3 次：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: right">3 次中成功次数</th>
+      <th style="text-align: right">Tasks</th>
+      <th>含义</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: right">0/3</td>
+      <td style="text-align: right">1,352（38%）</td>
+      <td>对当前 teacher 较难</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">1/3</td>
+      <td style="text-align: right">637（18%）</td>
+      <td>learnable band</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">2/3</td>
+      <td style="text-align: right">679（19%）</td>
+      <td>learnable band</td>
+    </tr>
+    <tr>
+      <td style="text-align: right">3/3</td>
+      <td style="text-align: right">892（25%）</td>
+      <td>较容易</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>1/3 与 2/3 合计 <strong>37%</strong>。这部分既不是全部失败、也不是已经饱和，最接近能产生有效学习信号的难度区间。</p>
+
+<details>
+  <summary><strong>展开：SFT recipe、结果与 error analysis</strong></summary>
+
+  <p><strong>SFT 配置</strong></p>
+
+  <ul>
+    <li>Qwen3-8B / 14B / 32B，full-parameter SFT；</li>
+    <li>AdamW，$\beta_1=0.9,\beta_2=0.95$，weight decay $10^{-4}$；</li>
+    <li>learning rate $2\times10^{-5}$，cosine schedule，10% warmup；</li>
+    <li>5 epochs，bf16，gradient clipping 1.0；</li>
+    <li>micro-batch 为每 GPU 1，再用 gradient accumulation。</li>
+  </ul>
+
+  <p><strong>Terminal-Bench 结果</strong></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th style="text-align: right">TB 1.0</th>
+        <th style="text-align: right">Avg. turns</th>
+        <th style="text-align: right">TB 2.0</th>
+        <th style="text-align: right">Avg. turns</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Qwen3-8B + SkillSynth</td>
+        <td style="text-align: right">17.1</td>
+        <td style="text-align: right">1.8</td>
+        <td style="text-align: right">13.5</td>
+        <td style="text-align: right">2.8</td>
+      </tr>
+      <tr>
+        <td>Qwen3-14B + SkillSynth</td>
+        <td style="text-align: right">22.9</td>
+        <td style="text-align: right">1.8</td>
+        <td style="text-align: right">19.9</td>
+        <td style="text-align: right">1.6</td>
+      </tr>
+      <tr>
+        <td>Qwen3-32B + SkillSynth</td>
+        <td style="text-align: right">33.8</td>
+        <td style="text-align: right">3.1</td>
+        <td style="text-align: right">29.6</td>
+        <td style="text-align: right">1.6</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>TB 1.0 含 80 tasks，TB 2.0 含 89 tasks；结果取 3 次独立运行的均值并报告 95% confidence interval。表里最稳妥的结论是 scaling trend：同一 SkillSynth 数据配方下，模型规模越大，两个 benchmark 都持续提高。</p>
+
+  <p><img src="../assets/paper-reading/terminal-agent-env-synthesis/skillsynth-figure1-diversity.png" alt="SkillSynth Figure 1：不同数据源的 scenario、skill 与 pair 数量" /></p>
+
+  <p><em>原论文 Figure 1。作者用相同抽取器比较 trajectory diversity；SkillSynth 在 scenarios、skills 与 scenario-skill pairs 上都更高。进一步的对照显示，其 unique scenario-skill coverage 比 single-skill synthesis 高 31%，比 random multi-skill synthesis 高 19%。这里衡量的是 rollout 中实际出现的结构，而不是题面里声称包含多少 skills。</em></p>
+
+  <p><strong>失败行为分布</strong></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Failure mode</th>
+        <th style="text-align: right">占比</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Partial implementation</td>
+        <td style="text-align: right">42.2%</td>
+      </tr>
+      <tr>
+        <td>过度相信 inline self-test</td>
+        <td style="text-align: right">29.5%</td>
+      </tr>
+      <tr>
+        <td>Premature termination</td>
+        <td style="text-align: right">12.9%</td>
+      </tr>
+      <tr>
+        <td>API / flag hallucination</td>
+        <td style="text-align: right">7.0%</td>
+      </tr>
+      <tr>
+        <td>Debug fixation</td>
+        <td style="text-align: right">5.1%</td>
+      </tr>
+      <tr>
+        <td>Error rationalization</td>
+        <td style="text-align: right">3.3%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>前两类合计超过 70%：很多失败不是完全不会，而是做到一半就停，或用自己写的局部检查替代官方 verifier。这也解释了为什么 terminal-agent 数据需要完整可执行环境与独立 tests，而不能只训练“看起来合理的命令序列”。</p>
+
+</details>
+
+<hr />
+
+<h2 id="terminal-worldskill-同时生成-i--e--v--g">Terminal-World：skill 同时生成 I / E / V / G</h2>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure1-overview-results.png" alt="Terminal-World 的核心思路与数据效率结果" /></p>
+
+<p><em>原论文 Figure 1。左侧把一个 agent skill 解码成 what / when / how，分别约束 task、environment 与 trajectory；右侧显示同一条 synthesis recipe 的数据效率与 scaling trend。这里最重要的不是“skill 是 prompt seed”，而是 skill 同时提供任务语义、环境前置条件和执行 SOP，使三类 artifact 从同一个 primitive 派生。</em></p>
+
+<h3 id="为什么-agent-skill-适合当-synthesis-primitive">为什么 agent skill 适合当 synthesis primitive</h3>
+
+<p>Terminal-World 认为一个好的 skill 天然包含：</p>
+
+<ul>
+  <li><strong>what</strong>：最终要完成什么；</li>
+  <li><strong>when</strong>：需要哪些输入、前置状态和适用条件；</li>
+  <li><strong>how</strong>：典型执行步骤、工具和 failure modes。</li>
+</ul>
+
+<p>这三部分分别可以派生：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>what → instruction
+when → environment blueprint
+how  → execution guideline
+</code></pre></div></div>
+
+<p>所以不必先生成题面，再事后“给题面配一个 container”。</p>
+
+<h3 id="四阶段-pipeline">四阶段 pipeline</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure2-pipeline.png" alt="Terminal-World 四阶段 pipeline" /></p>
+
+<p><em>原论文 Figure 2。Stage A 从 10k skills 过滤并组合 synthesis primitives；Stage B 生成 $(\mathcal I,\mathcal E,\mathcal V,\mathcal G)$；Stage C 分三期生成 initial files、sandbox setup 与 pytest verifier；Stage D 把 guideline 只用于 teacher rollout，训练前再从 student 输入中移除。</em></p>
+
+<h4 id="stage-askill-collection">Stage A：Skill collection</h4>
+
+<p>从 ClawHub / SkillMP 收集 10,000 skills：</p>
+
+<ol>
+  <li>rule filter：去掉 terminal-irrelevant skills，剩 8,520；</li>
+  <li>LLM filter：terminal applicability 与 content richness 都必须 3/3，剩 3,025；</li>
+  <li>popularity filter：取下载量前 1,000，覆盖 12 categories / 63 subcategories。</li>
+</ol>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure6-skill-taxonomy.png" alt="Terminal-World 附录 Figure 6：skill taxonomy" /></p>
+
+<p><em>附录 Figure 6。1,000 个最终 skills 覆盖 12 个大类与 63 个 subcategories；Tools、Development、Testing &amp; Security、Data &amp; AI 是较大的 terminal-native 分支，同时也保留 Documentation、Business、Research、Databases 等较长尾能力。subcategory 不只是展示标签，后面决定一个 composition relation 应进入 skill team 还是 skill graph。</em></p>
+
+<h5 id="skill-team-与-skill-graph-到底怎么划分">Skill team 与 skill graph 到底怎么划分</h5>
+
+<p>先对 1,000 个 single skills 的 skill pair 运行 SkillNet，得到四种关系：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>SkillNet relation</th>
+      <th>Terminal-World 怎么用</th>
+      <th>直觉</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Compose with</code></td>
+      <td>同 subcategory 时进入 team 候选</td>
+      <td>两个能力可以在同一专业工作流中协作</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Depends on</code></td>
+      <td>跨 subcategory 时作为有向 graph edge</td>
+      <td>下游能力以前一个能力的产物或状态为前置条件</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Similar to</code></td>
+      <td>用于 deduplication</td>
+      <td>两个 skills 近似重复，不值得同时扩展</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">Belong to</code></td>
+      <td>丢弃</td>
+      <td>与已有 category/subcategory taxonomy 信息重复</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>因此 team 和 graph 不是按 skill 数量划分，而是按<strong>关系类型 + taxonomy 边界</strong>划分：</p>
+
+<p><strong>Skill team：同 subcategory 的 depth extension</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>same subcategory
++ Compose-with relations
+→ TeamSkill-Creator
+→ multi-role workflow
+→ flatten to one skill.md
+</code></pre></div></div>
+
+<ul>
+  <li>同一个专业子领域里，多个角色围绕同一目标分工，例如数据工程中的 schema 设计、数据校验和 pipeline monitoring。</li>
+  <li><code class="language-plaintext highlighter-rouge">Compose with</code> 是相对对称的协作关系，重点是把单个 skill 的 SOP 加深为多角色 workflow，而不是强调严格的先后依赖。</li>
+  <li>TeamSkill-Creator 由 Claude Code 驱动，把相关 skills 整合成统一的 goal、role responsibilities、handoff 与 end-to-end SOP。</li>
+  <li>最终得到 <strong>76 个 skill teams</strong>。</li>
+</ul>
+
+<p><strong>Skill graph：跨 subcategory 的 breadth extension</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cross-subcategory
++ directed Depends-on relations
+→ directed composition graph
+→ greedy maximal-path cover
+→ flatten each path to one skill.md
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Depends on</code> 保留方向，例如 <code class="language-plaintext highlighter-rouge">data extraction → statistical analysis → report generation</code>，后一个 skill 消费前一个 skill 产生的状态或 artifact。</li>
+  <li>先以 skills 为节点、跨 subcategory 的 dependency 为边构造有向图。</li>
+  <li>对图中每个可能起点，通过 DFS 找从该点出发的 longest simple path；从所有候选中取最长路径 $p^*$。</li>
+  <li>把 $p^*$ flatten 为一个 graph-skill primitive 后，从图中移除该路径上的节点，再重复查找下一条最长路径。</li>
+  <li>路径长度小于 2 时停止，因为此时只剩无法组成 workflow 的 isolated nodes。</li>
+  <li>这个 greedy path cover 让进入 graph 的 skill 不重复消费，并尽量形成长的 cross-domain pipeline；最终得到 <strong>237 个 skill graphs</strong>。</li>
+</ul>
+
+<p>论文把它们概括为：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>single skill：一个原子能力
+skill team：同领域多角色协作，把 workflow 做深
+skill graph：跨领域有向依赖，把 capability coverage 做宽
+</code></pre></div></div>
+
+<p>三者最终全部 flatten 成相同 <code class="language-plaintext highlighter-rouge">skill.md</code> 接口，所以下游 task generator 不需要知道输入 primitive 原来是 single、team 还是 graph。</p>
+
+<h4 id="stage-btask-generation">Stage B：Task generation</h4>
+
+<p>每个 skill/team/graph 与 FinePersonas 中一个 persona 配对。只有 pair 合理才生成：</p>
+
+\[(\mathcal{I},\mathcal{E},\mathcal{V},\mathcal{G})\]
+
+<ul>
+  <li>$\mathcal{I}$：instruction；</li>
+  <li>$\mathcal{E}$：initial files + setup steps；</li>
+  <li>$\mathcal{V}$：evaluation criteria；</li>
+  <li>$\mathcal{G}$：给 teacher 的 execution guideline。</li>
+</ul>
+
+<p>五维 judge 每一项都必须至少 4/5：</p>
+
+<ol>
+  <li>instruction quality；</li>
+  <li>closed-world solvability；</li>
+  <li>blueprint completeness；</li>
+  <li>guideline quality；</li>
+  <li>evaluation-criteria quality。</li>
+</ol>
+
+<details>
+  <summary><strong>展开：Task Generation prompt 的完整 contract</strong></summary>
+
+  <p><strong>角色与目标</strong></p>
+
+  <ul>
+    <li>为 terminal-agent training 创建真实 Linux terminal task。</li>
+    <li>输入是 Agent Skill 与 Persona；skill 决定 capability、workflow、failure modes，persona 决定领域背景、动机与请求语气。</li>
+    <li>任务必须忠实保留 skill 的核心机制，同时形成自包含、真实、可验证的工作请求。</li>
+  </ul>
+
+  <p><strong>运行环境</strong></p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>OS: Debian 13 (trixie)
+working directory: /app
+pre-installed:
+  Python 3.12 / pip 25
+  Node.js 20 / npm 10
+  Java 8
+  gcc/g++ 14, make, git, curl, wget, tmux
+additional packages: apt-get
+subdirectories:
+  /output, /logs, /tests, /solution
+</code></pre></div>  </div>
+
+  <p><strong>生成步骤</strong></p>
+
+  <ol>
+    <li>先判断 persona 与 skill 是否有真实联系。</li>
+    <li>明显不相关时：
+      <ul>
+        <li><code class="language-plaintext highlighter-rouge">pair_relevance = "unrelated"</code>；</li>
+        <li>给出具体原因；</li>
+        <li><code class="language-plaintext highlighter-rouge">task_title = "UNRELATED_PAIR"</code>；</li>
+        <li>其他内容字段留空。</li>
+      </ul>
+    </li>
+    <li>相关时生成 agent 实际看到的 <code class="language-plaintext highlighter-rouge">instruction</code>：必须自包含、可在 sandbox 中解决，并可通过 observable outputs 验证。</li>
+    <li><code class="language-plaintext highlighter-rouge">initial_files</code> 的每项都包含：
+      <ul>
+        <li><code class="language-plaintext highlighter-rouge">generation_mode</code>: <code class="language-plaintext highlighter-rouge">llm_direct | local_tool | remote_fetch</code>；</li>
+        <li><code class="language-plaintext highlighter-rouge">filepath</code>；</li>
+        <li><code class="language-plaintext highlighter-rouge">description</code>：完整 reproduction spec，包含格式、内部结构、规模、2–3 个具体示例值，以及 agent 必须处理的 deliberate anomalies。</li>
+      </ul>
+    </li>
+    <li><code class="language-plaintext highlighter-rouge">setup_steps</code> 是自然语言、有序的环境准备步骤；没有额外 setup 时返回空数组。</li>
+    <li>每条 <code class="language-plaintext highlighter-rouge">evaluation_criteria</code> 必须能直接翻译为 pytest assertion，包括精确 path、key、threshold 与 format。</li>
+  </ol>
+
+  <p><strong>输出</strong></p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"pair_relevance"</span><span class="p">:</span><span class="w"> </span><span class="s2">"related | unrelated"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"pair_relevance_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"task_title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"instruction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"initial_files"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"generation_mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"llm_direct | local_tool | remote_fetch"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app/..."</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"setup_steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"evaluation_criteria"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>只允许输出一个 JSON object，不加 Markdown fence 或额外说明。模板变量是 <code class="language-plaintext highlighter-rouge">{skill}</code> 与 <code class="language-plaintext highlighter-rouge">{persona}</code>。</p>
+
+</details>
+
+<details>
+  <summary><strong>展开：Guideline Generation prompt 的完整 contract</strong></summary>
+
+  <p>输入：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Skill: {skill}
+Core Goal: {core_goal_json}
+</code></pre></div>  </div>
+
+  <p>目标是生成 teacher rollout 使用的 step-by-step execution guideline。每一步必须：</p>
+
+  <ul>
+    <li><strong>Actionable</strong>：给出具体 command、file path 或 edit；</li>
+    <li><strong>Verifiable</strong>：说明如何确认该步成功；</li>
+    <li><strong>Ordered</strong>：尊重任务依赖顺序；</li>
+    <li>优先从 skill SOP 提取操作；</li>
+    <li>关键 caveat 以 <code class="language-plaintext highlighter-rouge">IMPORTANT:</code> 或 <code class="language-plaintext highlighter-rouge">WARNING:</code> 开头；</li>
+    <li>不泄露最终文件内容或完整 solution；</li>
+    <li>避免 “inspect the project” 或 “fix errors” 这类没有 target、command、checkpoint 的空泛步骤。</li>
+  </ul>
+
+  <p>每项使用统一结构：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Step N: &lt;action&gt; -- &lt;exact command or edit&gt; -- &lt;verification or warning&gt;
+</code></pre></div>  </div>
+
+  <p>严格输出：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"guideline"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"Step 1: ..."</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"Step 2: ..."</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+</details>
+
+<details>
+  <summary><strong>展开：Task Quality Judge prompt 的完整评分规则</strong></summary>
+
+  <p>输入：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Persona: {persona_text}
+Skill: {skill_text}
+Generated Goal: {goal_json}
+</code></pre></div>  </div>
+
+  <p>Judge 不检查固定文风或格式，而检查 realism、task quality 与 training value。自然、简洁的 instruction 可以拿高分，不要求固定 opener、编号列表或 <code class="language-plaintext highlighter-rouge">Requirements:</code> 标题。</p>
+
+  <p>五个维度均为 0–5：</p>
+
+  <ol>
+    <li><strong>Instruction Quality</strong>
+      <ul>
+        <li>5：真实、强 skill alignment、goal 与 success condition 清晰；</li>
+        <li>3：可执行但泛化或部分缺信息；</li>
+        <li>0：冲突、不连贯或不可执行。</li>
+      </ul>
+    </li>
+    <li><strong>Solvable &amp; Closed-World</strong>
+      <ul>
+        <li>5：完全在 isolated container 内完成，数据与依赖都在 blueprint；</li>
+        <li>3：大体 closed-world，但有少量可合理补全的模糊点；</li>
+        <li>0：明确依赖外网、私有凭据或缺少关键输入。</li>
+      </ul>
+    </li>
+    <li><strong>Blueprint Completeness</strong>
+      <ul>
+        <li>检查 filesystem、data schema、dependencies、entrypoints、validation 五类信息；</li>
+        <li>5 表示五类齐全，3 表示可构建但缺 1–2 类关键细节，0 表示空或自相矛盾。</li>
+      </ul>
+    </li>
+    <li><strong>Guideline Quality</strong>
+      <ul>
+        <li>检查 workflow ordering、granularity、checkpoints、SOP coverage 与是否泄露答案；</li>
+        <li>过于抽象或过度脚本化都会降分。</li>
+      </ul>
+    </li>
+    <li><strong>Evaluation Criteria Quality</strong>
+      <ul>
+        <li>检查是否 outcome-focused、具体、可稳定转为 black-box pytest；</li>
+        <li>只写主观目标或缺少关键 condition 会降分。</li>
+      </ul>
+    </li>
+  </ol>
+
+  <p>输出严格为：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"instruction_quality"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"score"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">},</span><span class="w">
+  </span><span class="nl">"solvable_closed_world"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"score"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">},</span><span class="w">
+  </span><span class="nl">"blueprint_completeness"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"score"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">},</span><span class="w">
+  </span><span class="nl">"guideline_quality"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"score"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">},</span><span class="w">
+  </span><span class="nl">"evaluation_criteria_quality"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"score"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>pipeline 只保留五项都至少 4 分的样本。</p>
+
+</details>
+
+<h4 id="stage-cenvironment-building">Stage C：Environment building</h4>
+
+<p>最终 sandbox 有三类 artifact：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>F       initial files
+B_env   setup script
+T_test  pytest verifier
+</code></pre></div></div>
+
+<p>每类 artifact 都走统一 GVR：</p>
+
+\[x^{(0)}=\mathrm{Generate}(\cdot),\quad
+x^{(t+1)}=\mathrm{Repair}(x^{(t)},\mathrm{Verify}(x^{(t)}))\]
+
+<p>最多 3 个 repair iterations。</p>
+
+<p>Initial files 按 generation mode 路由到三类 agent：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">llm_direct</code>：直接生成文本/代码；</li>
+  <li><code class="language-plaintext highlighter-rouge">local_tool</code>：用 Python 等本地工具生成二进制或复杂 artifact；</li>
+  <li><code class="language-plaintext highlighter-rouge">remote_fetch</code>：search / fetch / download 外部资产。</li>
+</ul>
+
+<p>File verifier 同时检查：</p>
+
+<ul>
+  <li>internal correctness：格式与描述一致；</li>
+  <li>external consistency：跨文件 path、schema、reference 一致。</li>
+</ul>
+
+<p>Setup 使用 shared Debian 13 sandbox + per-task setup script，而非每题一个 Docker image。env verifier 不只看 exit code，还生成 probing commands 检查 package import、CLI availability、directory 与版本。</p>
+
+<p>Pytest verifier 必须：</p>
+
+<ul>
+  <li>可执行，无 syntax/import error；</li>
+  <li>在 pre-execution initial state 全部失败；</li>
+  <li>只检查 agent 产生的结果，不重复检查已验证的 initial files。</li>
+</ul>
+
+<details>
+  <summary><strong>展开：三种 Initial File Generation prompts</strong></summary>
+
+  <p><strong>1. <code class="language-plaintext highlighter-rouge">llm_direct</code></strong></p>
+
+  <p>输入：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Task Instruction: {instruction}
+Environment Blueprint: {blueprint}
+Target File: {target_file}
+Previously Generated Files: {previous_files}
+</code></pre></div>  </div>
+
+  <p>LLM 只生成当前 target file，并同时参考 filepath/description、task context、system requirements 与之前文件的 imports/API，保证跨文件一致。响应结尾必须包含：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"exact target path"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"content"</span><span class="p">:</span><span class="w"> </span><span class="s2">"full file content"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p><strong>2. <code class="language-plaintext highlighter-rouge">local_tool</code></strong></p>
+
+  <p>这是在 Linux sandbox 内运行的 specialized artifact agent，只允许调用：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"tool"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"target_filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"timeout_sec"</span><span class="p">:</span><span class="w"> </span><span class="mi">120</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>约束：</p>
+
+  <ul>
+    <li>只能使用 Python tool；</li>
+    <li><code class="language-plaintext highlighter-rouge">target_filepath</code> 必须与请求路径完全一致；</li>
+    <li>用程序生成或修复目标 artifact；</li>
+    <li>一直工作到 tool observation 确认 artifact valid；</li>
+    <li>只处理目标 artifact，不解决整个 task。</li>
+  </ul>
+
+  <p>输入为 <code class="language-plaintext highlighter-rouge">{target_filepath}</code>、<code class="language-plaintext highlighter-rouge">{file_description}</code>、<code class="language-plaintext highlighter-rouge">{instruction_summary}</code>。</p>
+
+  <p><strong>3. <code class="language-plaintext highlighter-rouge">remote_fetch</code></strong></p>
+
+  <p>可用 tools：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>web_search(query, top_k?, domain_hint?)
+fetch_page(url, mode=http|dynamic|stealth, timeout_ms?)
+download_file(url, save_as, timeout_ms?)
+</code></pre></div>  </div>
+
+  <p>约束：</p>
+
+  <ul>
+    <li>agent 是 stateless，不能假设浏览器 state 或 session reuse；</li>
+    <li>search、fetch、download 是分离步骤；</li>
+    <li><code class="language-plaintext highlighter-rouge">save_as</code> 必须严格等于 target path；</li>
+    <li>一直执行到 downloaded artifact 验证成功；</li>
+    <li>只抓目标 artifact，不执行整体 task。</li>
+  </ul>
+
+</details>
+
+<details>
+  <summary><strong>展开：File Verification prompt</strong></summary>
+
+  <p>System role 是 verification-only file verifier：</p>
+
+  <ul>
+    <li>scope 仅限声明的 filepaths 与 specifications；</li>
+    <li>只能用 shell commands 检查文件；</li>
+    <li>禁止修改文件、访问网络或验证 runtime state；</li>
+    <li>evidence 不足时优先 <code class="language-plaintext highlighter-rouge">status="continue"</code>；</li>
+    <li>每轮只输出一个 JSON object。</li>
+  </ul>
+
+  <p>继续检查：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"analysis"</span><span class="p">:</span><span class="w"> </span><span class="s2">"还需要检查什么"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"continue"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"cat /app/data.csv"</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>结束检查：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"analysis"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"finalize"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"result"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"overall_verdict"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pass | fail"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"file_findings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"filepath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"repair_instructions"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+    </span><span class="nl">"global_findings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"primary_owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"llm_direct | specialized | unattributed"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"repair_instructions"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p><code class="language-plaintext highlighter-rouge">pass</code> 时两个 findings arrays 必须为空；<code class="language-plaintext highlighter-rouge">fail</code> 时至少有一条 finding，且 repair instruction 必须具体可执行。<code class="language-plaintext highlighter-rouge">global_findings</code> 只用于仍然属于 file scope 的跨文件 path、schema、reference 问题。</p>
+
+  <p>User input 包含 <code class="language-plaintext highlighter-rouge">{instruction}</code>、<code class="language-plaintext highlighter-rouge">{file_lines}</code> 与初始 <code class="language-plaintext highlighter-rouge">{workspace_tree}</code>；workspace tree 只是初始 hint，不能代替实际检查。</p>
+
+</details>
+
+<details>
+  <summary><strong>展开：Environment Build / Verify / Repair prompts</strong></summary>
+
+  <p>三类 prompt 共享以下边界：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Debian 13, x86_64
+user uid=1000, non-root; privileged commands use sudo
+working directory: /app
+base tools already installed
+instruction is context only
+environment agent must not solve the task
+</code></pre></div>  </div>
+
+  <p><strong>Env Build</strong></p>
+
+  <p>输入 <code class="language-plaintext highlighter-rouge">{instruction}</code>、<code class="language-plaintext highlighter-rouge">{blueprint}</code>、<code class="language-plaintext highlighter-rouge">{pre_seeded_files}</code>。只生成：</p>
+
+  <ol>
+    <li>按顺序执行 <code class="language-plaintext highlighter-rouge">setup_steps</code> 的 shell commands；</li>
+    <li>创建必要目录；</li>
+    <li>从 pre-seeded dependency manifests 安装依赖；</li>
+    <li>启动或配置 services、environment variables 与 permissions。</li>
+  </ol>
+
+  <p>Negative constraints：</p>
+
+  <ul>
+    <li>绝不创建、下载或覆盖 pre-seeded asset path；</li>
+    <li>不写 application source code；</li>
+    <li>不执行 task entrypoint；</li>
+    <li><code class="language-plaintext highlighter-rouge">sudo</code> 运行 network command 时使用 <code class="language-plaintext highlighter-rouge">sudo -E</code> 保留 proxy env；</li>
+    <li>结果以一个 Bash code block 结束。</li>
+  </ul>
+
+  <p><strong>Env Verify</strong></p>
+
+  <p>输入还包括已经执行的 <code class="language-plaintext highlighter-rouge">{setup_script}</code>。只生成 probing commands：</p>
+
+  <ul>
+    <li>import required Python/Node libraries；</li>
+    <li>检查 CLI tools 是否存在；</li>
+    <li>检查 required directories；</li>
+    <li>有明确 version 要求时验证版本。</li>
+  </ul>
+
+  <p>禁止安装依赖、写代码或执行 task。verify script 不使用 <code class="language-plaintext highlighter-rouge">set -e</code>，因此所有 probes 都应运行，以收集完整错误。</p>
+
+  <p><strong>Env Repair</strong></p>
+
+  <p>输入增加 <code class="language-plaintext highlighter-rouge">{commands}</code> 与 <code class="language-plaintext highlighter-rouge">{errors}</code>。repair 在一个 <strong>fresh sandbox</strong> 中执行，因此：</p>
+
+  <ul>
+    <li>不能依赖上次失败尝试留下的 side effects；</li>
+    <li>必须返回完整 corrected command list，而不是 patch/delta；</li>
+    <li>commands 会合并为使用 <code class="language-plaintext highlighter-rouge">set -euxo pipefail</code> 的一次性 Bash script；</li>
+    <li>同样不得覆盖 pre-seeded assets、写 application code 或执行 task。</li>
+  </ul>
+
+</details>
+
+<details>
+  <summary><strong>展开：Pytest Verifier Generation prompt</strong></summary>
+
+  <p>Verifier 在 agent 完成任务后、同一个 sandbox state 中运行。它只判断 task 是否完成，不能读取 agent messages 或 tool traces。</p>
+
+  <p>输入：</p>
+
+  <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Instruction: {instruction}
+Evaluation Criteria: {evaluation_criteria}
+Target Output File: {target_output_file}
+Initial Text Files: {initial_text_files}
+Initial Asset Metadata: {initial_asset_files}
+Validated Environment File Paths: {validated_filepaths}
+</code></pre></div>  </div>
+
+  <p>严格输出：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"system_packages"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"python_packages"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"..."</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"helper_files"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tests/filename.ext"</span><span class="p">,</span><span class="w"> </span><span class="nl">"content"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"test_outputs_py"</span><span class="p">:</span><span class="w"> </span><span class="s2">"valid pytest source"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>完整约束：</p>
+
+  <ol>
+    <li>使用 pytest；</li>
+    <li><code class="language-plaintext highlighter-rouge">test_outputs_py</code> 必须是合法 Python；</li>
+    <li>tests 必须 black-box；</li>
+    <li>优先验证文件、command behavior、localhost HTTP behavior 或 deterministic end-to-end examples；</li>
+    <li>deterministic 且 self-contained；</li>
+    <li>除非任务明确需要 localhost，否则不访问网络；</li>
+    <li>只添加 verifier 自己需要的 packages；</li>
+    <li>extra test assets 放入 <code class="language-plaintext highlighter-rouge">helper_files</code>；</li>
+    <li>JSON 外不输出解释；</li>
+    <li>initial files 已存在且已验证，不测试其存在性或内容；</li>
+    <li>只检查 evaluation criteria 与 agent 创建的结果，避免 vacuous pass。</li>
+  </ol>
+
+</details>
+
+<h4 id="stage-dtrajectory-collection">Stage D：Trajectory collection</h4>
+
+<p>DeepSeek-V3.2 + Terminus2 接收：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>instruction I + execution guideline G + history H
+</code></pre></div></div>
+
+<p>rollout 后运行 pytest。论文保留成功与失败 trajectories；SFT 前从模型输入中移除 guideline，让 student 学 terminal interaction，而不是依赖隐式提示。</p>
+
+<details>
+  <summary><strong>展开：Terminus2 teacher system prompt</strong></summary>
+
+  <p>Teacher 每轮严格返回：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"analysis"</span><span class="p">:</span><span class="w"> </span><span class="s2">"基于 terminal output 判断已完成与未完成部分"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"plan"</span><span class="p">:</span><span class="w"> </span><span class="s2">"下一步计划、命令及预期作用"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"commands"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"keystrokes"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ls -la</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span><span class="w"> </span><span class="nl">"duration"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"keystrokes"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cd project</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span><span class="w"> </span><span class="nl">"duration"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"task_complete"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>规则：</p>
+
+  <ul>
+    <li><code class="language-plaintext highlighter-rouge">analysis</code>、<code class="language-plaintext highlighter-rouge">plan</code>、<code class="language-plaintext highlighter-rouge">commands</code> 必填，<code class="language-plaintext highlighter-rouge">task_complete</code> 可选且默认 false；</li>
+    <li><code class="language-plaintext highlighter-rouge">keystrokes</code> 原样发送给 terminal，command 必须以 <code class="language-plaintext highlighter-rouge">\n</code> 结尾；</li>
+    <li>特殊按键使用 tmux-style sequence，例如 <code class="language-plaintext highlighter-rouge">C-c</code>、<code class="language-plaintext highlighter-rouge">C-d</code>；</li>
+    <li><code class="language-plaintext highlighter-rouge">duration</code> 控制发送后等待时间：即时 command 通常 0.1 秒，编译/搜索约 1 秒，慢任务按需增加；</li>
+    <li>更推荐用空 keystrokes 做短轮询，而不是一次阻塞很久；</li>
+    <li>空 <code class="language-plaintext highlighter-rouge">commands</code> array 合法，可用于只观察当前状态；</li>
+    <li>输入为 <code class="language-plaintext highlighter-rouge">{instruction}</code> 与 <code class="language-plaintext highlighter-rouge">{terminal_state}</code>。</li>
+  </ul>
+
+  <p>注意 guideline $\mathcal G$ 是 collection-time privileged guidance：teacher rollout 时可见，但 SFT 前从 student input 删除。</p>
+
+</details>
+
+<p>这套 prompts 的核心不是角色措辞，而是 <strong>scope isolation</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>task agent       只定义 I / E / V
+guideline agent  只生成 collection-time G
+file agents      只创建指定 initial artifacts
+file verifier    只检查静态文件
+env agents       只准备或验证 runtime
+pytest agent     只编译终态验收逻辑
+teacher agent    才真正执行任务
+</code></pre></div></div>
+
+<h3 id="数据与成本">数据与成本</h3>
+
+<ul>
+  <li>5,723 tasks；</li>
+  <li>4,973 personas；</li>
+  <li>3,723 single-skill + 1,000 team-skill + 1,000 graph-skill；</li>
+  <li>平均 2.25 initial files；</li>
+  <li>104 file types；</li>
+  <li>平均 4.27 pytest tests；</li>
+  <li>平均 trajectory 13.44 steps / 18,176 tokens；</li>
+  <li>6,884 accepted task specs → 5,723 executable envs，construction success 83.1%；</li>
+  <li>pipeline 总成本约 $999.59，约 $0.17 / trajectory。</li>
+</ul>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure3-data-stats.png" alt="Terminal-World Figure 3：environment 与 trajectory 统计" /></p>
+
+<p><em>原论文 Figure 3。四个 panel 分别展示 environment domain 词云、主要 file types、trajectory step 分布和 Bash command 分布。<code class="language-plaintext highlighter-rouge">.py</code>、<code class="language-plaintext highlighter-rouge">.txt</code>、<code class="language-plaintext highlighter-rouge">.csv</code> 最常见，但总计覆盖 104 种 file types；trajectory 主要集中在 6–30 steps，并覆盖 1,939 种 Bash commands。</em></p>
+
+<h3 id="结果">结果</h3>
+
+<p>论文在 Terminal-Bench 2.0、AIME24、AIME25、DABench、TableBench、BIRD 六个 benchmark 上报告 Pass@1 / Pass@3。最值得展示的是同 base-model scale 的 Terminal-Bench 2.0：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th style="text-align: right">Training samples</th>
+      <th style="text-align: right">TB 2.0 P@1</th>
+      <th style="text-align: right">TB 2.0 P@3</th>
+      <th style="text-align: right">六项平均 P@1</th>
+      <th style="text-align: right">六项平均 P@3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Nemotron-Terminal-8B</td>
+      <td style="text-align: right">490.5k</td>
+      <td style="text-align: right">13.5</td>
+      <td style="text-align: right">21.3</td>
+      <td style="text-align: right">58.5</td>
+      <td style="text-align: right">69.3</td>
+    </tr>
+    <tr>
+      <td>Terminal-World-8B</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right">15.7</td>
+      <td style="text-align: right">23.6</td>
+      <td style="text-align: right">63.5</td>
+      <td style="text-align: right">71.7</td>
+    </tr>
+    <tr>
+      <td>Nemotron-Terminal-14B</td>
+      <td style="text-align: right">490.5k</td>
+      <td style="text-align: right">20.2</td>
+      <td style="text-align: right">24.7</td>
+      <td style="text-align: right">66.9</td>
+      <td style="text-align: right">73.2</td>
+    </tr>
+    <tr>
+      <td>Terminal-World-14B</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right">21.3</td>
+      <td style="text-align: right">27.0</td>
+      <td style="text-align: right">66.0</td>
+      <td style="text-align: right">74.1</td>
+    </tr>
+    <tr>
+      <td>Nemotron-Terminal-32B</td>
+      <td style="text-align: right">490.5k</td>
+      <td style="text-align: right">27.0</td>
+      <td style="text-align: right">37.1</td>
+      <td style="text-align: right">68.9</td>
+      <td style="text-align: right">76.0</td>
+    </tr>
+    <tr>
+      <td>Terminal-World-32B</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right"><strong>31.5</strong></td>
+      <td style="text-align: right"><strong>43.8</strong></td>
+      <td style="text-align: right"><strong>69.3</strong></td>
+      <td style="text-align: right"><strong>77.9</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Terminal-World 只使用 5.7k trajectories，约为 Nemotron-Terminal 训练量的 1.2%。32B 上 TB 2.0 提高 +4.5 P@1 / +6.7 P@3；但这不应简单解释成“所有 benchmark 都大幅领先”，14B 的六项平均 P@1 仍略低于 Nemotron，优势主要体现在数据效率、TB 2.0 以及更大的 32B scale。</p>
+
+<h3 id="ablation-与分析">Ablation 与分析</h3>
+
+<h4 id="sft-data-strategy-ablation">SFT data strategy ablation</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>Strategy</th>
+      <th style="text-align: right"># Samples</th>
+      <th style="text-align: right">8B P@1 / P@3</th>
+      <th style="text-align: right">14B P@1 / P@3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Full strategy</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right">15.7 / 23.6</td>
+      <td style="text-align: right">21.3 / 27.0</td>
+    </tr>
+    <tr>
+      <td>只用 1k single-skill</td>
+      <td style="text-align: right">1.0k</td>
+      <td style="text-align: right">9.0 / 12.4</td>
+      <td style="text-align: right">13.5 / 16.9</td>
+    </tr>
+    <tr>
+      <td>只用 1k team-skill</td>
+      <td style="text-align: right">1.0k</td>
+      <td style="text-align: right">10.1 / 13.5</td>
+      <td style="text-align: right">14.6 / 19.1</td>
+    </tr>
+    <tr>
+      <td>只用 1k graph-skill</td>
+      <td style="text-align: right">1.0k</td>
+      <td style="text-align: right">10.1 / 14.6</td>
+      <td style="text-align: right">15.7 / 20.2</td>
+    </tr>
+    <tr>
+      <td>缩小到 2.3k data</td>
+      <td style="text-align: right">2.3k</td>
+      <td style="text-align: right">12.4 / 18.0</td>
+      <td style="text-align: right">18.0 / 22.5</td>
+    </tr>
+    <tr>
+      <td>训练时保留 guideline</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right">13.5 / 20.2</td>
+      <td style="text-align: right">19.1 / 24.7</td>
+    </tr>
+    <tr>
+      <td>移除 failure trajectories</td>
+      <td style="text-align: right">2.3k</td>
+      <td style="text-align: right">10.1 / 14.6</td>
+      <td style="text-align: right">15.7 / 20.2</td>
+    </tr>
+    <tr>
+      <td>对 failure trajectory 用 negative SFT loss</td>
+      <td style="text-align: right">5.7k</td>
+      <td style="text-align: right">9.0 / 13.5</td>
+      <td style="text-align: right">14.6 / 19.1</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>三个结论：</p>
+
+<ol>
+  <li>graph-skill 单独训练通常略好于 single/team，但三类混合的 full strategy 最好，说明 breadth composition 有价值但不能替代数据规模与 primitive diversity。</li>
+  <li>teacher collection 需要 guideline，但 student training 不能把 guideline 留在 input；否则模型倾向跟随 SOP，而不是学自主 planning。</li>
+  <li>failure trajectory 不是“全错序列”。移除它已经明显掉点，对整条失败轨迹施加 negative loss 更差，因为会把其中大量正确的中间命令与 recovery 行为一起压低。</li>
+</ol>
+
+<p>附录随机抽取 300 条 verifier-failed trajectories，由四个 judge 复核，majority vote 认为 <strong>67.7% 实际完成了任务</strong>，进一步说明 binary verifier failure 与 trajectory-level semantic incorrectness 不是同一概念。</p>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure4-behavior.png" alt="Terminal-World Figure 4：行为效率对比" /></p>
+
+<p><em>原论文 Figure 4，只在 Terminal-World-32B 与 Nemotron-Terminal-32B 都解对的任务交集上比较。Terminal-World-32B 平均 10.2 steps、40.3 commands，command error rate 21.9%，均比 Nemotron-Terminal-32B 更低；student 推理时没有 guideline，却也比 teacher DeepSeek-V3.2 的执行更简洁。</em></p>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-world-figure5-persona-diversity.png" alt="Terminal-World Figure 5：persona 对 task scenario diversity 的影响" /></p>
+
+<p><em>原论文 Figure 5。固定生成 250 tasks：不使用 persona 时得到 74 个 scenario clusters；50 skills × 5 personas 得到 145 个，提升 1.96×；25 skills × 10 personas 得到 153 个，提升 2.07×。persona 的作用不是增加底层 capability，而是让同一 skill 在更多真实 usage context 中实例化。</em></p>
+
+<details>
+  <summary><strong>展开：Environment Quality Evaluation prompt</strong></summary>
+
+  <p>Judge 读取一个 Harbor task directory 中的 <code class="language-plaintext highlighter-rouge">instruction.md</code>、environment files 与 pytest tests；忽略 directory path 和 dataset identity，把每个 task 当匿名样本。四项各打 1–3 分：</p>
+
+  <ol>
+    <li><code class="language-plaintext highlighter-rouge">terminal_nativeness</code>：是否真的需要 compiler、package manager、system/build/network CLI，而不是只写文件或 echo。</li>
+    <li><code class="language-plaintext highlighter-rouge">env_task_consistency</code>：pre-placed files 与 setup 是否精确支持 instruction，是否存在 excess、gap 或 contradiction。</li>
+    <li><code class="language-plaintext highlighter-rouge">env_quality</code>：Dockerfile、setup 与 initial files 是否 well-formed、真实、完整、可执行，而非 fabricated stubs。</li>
+    <li><code class="language-plaintext highlighter-rouge">verifier_robustness</code>：pytest 是否覆盖关键 acceptance criteria、能区分 complete/incomplete、false-positive risk 是否低；只检查 file existence 会得低分。</li>
+  </ol>
+
+  <p>不适用的维度按 1 分处理。严格输出：</p>
+
+  <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"terminal_nativeness"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"terminal_nativeness_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"env_task_consistency"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"env_task_consistency_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"env_quality"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"env_quality_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"verifier_robustness"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"verifier_robustness_reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>  </div>
+
+  <p>三组 judge 的平均结果中，Terminal-World 的 terminal nativeness 为 2.69、env-task consistency 2.97、env quality 2.88、verifier robustness 2.92；后两项与 Endless-Terminal 相当或接近，最明显优势是 terminal nativeness 与 task-environment alignment。</p>
+
+</details>
+
+<hr />
+
+<h2 id="cli-universe把监督密度放在第一位">CLI-Universe：把监督密度放在第一位</h2>
+
+<h3 id="三阶段-pipeline">三阶段 pipeline</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/cli-universe-pipeline.png" alt="CLI-Universe 三阶段 pipeline" /></p>
+
+<p><em>原论文 Figure 1。Step 1 不是直接写题，而是 taxonomy anchor → evidence-guided research → blueprint，并用 clarity、solvability、difficulty 三维 rubric 验 blueprint；Step 2 在 pull/adapt 与 synthesize assets 之后组装 container 并做 runtime verification；Step 3 把 test agent 与 solution agent 分开，最后要求 initial fail、solution pass。</em></p>
+
+<h4 id="stage-1task-blueprint-construction">Stage 1：Task blueprint construction</h4>
+
+<p>Stage 1 不是一次 prompt 直接产出题面，而是原文明确拆成三个子阶段：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Task Candidate Specification
+→ Evidence-Guided Refinement
+→ Blueprint Formation and Validation
+</code></pre></div></div>
+
+<p><strong>1. Task Candidate Specification</strong></p>
+
+<p>候选任务由四维 anchor 定义：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>问题</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Domain</td>
+      <td>任务发生在哪个技术领域</td>
+    </tr>
+    <tr>
+      <td>Skill type</td>
+      <td>难点依赖什么专业知识</td>
+    </tr>
+    <tr>
+      <td>Capability</td>
+      <td>希望触发 exploration、recovery、planning 等哪种行为</td>
+    </tr>
+    <tr>
+      <td>Engineering pillar</td>
+      <td>新功能、debug、deployment、systems programming 等哪类工作</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>每个 domain 都有后三个维度各自允许的 value pool。系统先从池中采样组合，再围绕这个 anchor brainstorm task ideas；idea 必须真正触发指定 capability，而不只是换一个表面主题。候选按三项打分：</p>
+
+<ul>
+  <li><strong>creativity</strong>：不是已有模板的轻微改写；</li>
+  <li><strong>technical grounding</strong>：有具体技术机制可以支撑；</li>
+  <li><strong>feasibility</strong>：能在可得工具与隔离环境中实现和验证。</li>
+</ul>
+
+<p>只有高分 idea 进入下一步。</p>
+
+<p><strong>2. Evidence-Guided Refinement</strong></p>
+
+<p>research agent 迭代搜索：</p>
+
+<ul>
+  <li>repositories；</li>
+  <li>official docs；</li>
+  <li>issue discussions；</li>
+  <li>tutorials；</li>
+  <li>usage examples。</li>
+</ul>
+
+<p>它不是把链接当作 citation 附在题面后，而是逐轮把证据编译成：</p>
+
+<ul>
+  <li>specific tools 与版本；</li>
+  <li>realistic constraints；</li>
+  <li>真实出现过的 failure modes；</li>
+  <li>concrete input/output contracts。</li>
+</ul>
+
+<p>refinement 会持续到 specification 足以支持后面的 query formulation、environment construction 和 test generation。需要不可得工具、技术材料不足或约束互相冲突的候选会被丢弃。</p>
+
+<p><strong>3. Blueprint Formation and Validation</strong></p>
+
+<p>研究结果最终被编译成三个核心 artifact：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Instruction.md</code>；</li>
+  <li>internal <code class="language-plaintext highlighter-rouge">Hint.md</code>；</li>
+  <li>environment checklist。</li>
+</ul>
+
+<p>其中 Instruction 是 agent 可见的任务；Hint 只提供给 reference-solution agent，记录关键 resolution steps 与 expected intermediate states；environment checklist 则把资产、依赖、服务、路径和运行条件交给 Stage 2。validation target、I/O contract、failure modes 与工具约束分别被写进这三个 artifact，而不是额外独立的公开文件。</p>
+
+<p>进入 Stage 2 前，blueprint 还要通过 rubric review：specification 必须足够清晰，environment setup 必须允许稳定构建和可靠的 downstream verification。这个 gate 的效果由后面的 Figure 2(b) 验证：human accept rate 从 72% 升到 91%，LLM accept rate 从 75% 升到 93%。</p>
+
+<h4 id="stage-2environment-realization">Stage 2：Environment realization</h4>
+
+<p>Asset strategy 有两条路：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pull &amp; adapt:
+  repository / docs / dataset / config / logs
+  → normalize / inject controlled fault / rescope
+
+synthesize:
+  no suitable external asset
+  → controlled variants with known ground truth
+  → generate verification metadata
+</code></pre></div></div>
+
+<p>之后打包 Docker：</p>
+
+<ul>
+  <li>pinned dependencies；</li>
+  <li>environment variables；</li>
+  <li>services / permissions；</li>
+  <li>fixed filesystem paths；</li>
+  <li>inter-component references；</li>
+  <li>smoke tests：install、service startup、layout、reachability。</li>
+</ul>
+
+<h4 id="stage-3test-construction--executable-filtering">Stage 3：Test construction + executable filtering</h4>
+
+<p>Test agent 根据 realized environment 与 validation target 生成测试，并按 rubric 迭代：</p>
+
+<ul>
+  <li>correctness；</li>
+  <li>determinism；</li>
+  <li>edge-case coverage。</li>
+</ul>
+
+<p>Solution agent 看 internal hint，生成成功 trajectory。</p>
+
+<p>随后两层最有辨识度的过滤：</p>
+
+<p><strong>Hint-conditional</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>without hint → fail
+with hint    → pass
+</code></pre></div></div>
+
+<p>它不是只证明“任务可解”，而是要求 teacher supervision 对成功有实际增量。</p>
+
+<p><strong>Fail-to-pass</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tests(initial environment) = fail
+tests(after hinted solution) = pass
+</code></pre></div></div>
+
+<p>最终只有 33.6% 候选留存。</p>
+
+<p>论文专门用 Figure 2 给三个 pipeline stage 配了佐证实验，而不是只展示最终分数：(a) 验证 Stage 1 的 evidence refinement 是否真的提高难度，(b) 验证 blueprint rubric，(c) 验证合成 tests 与人工 benchmark tests 的一致性；(d) 汇总五道过滤门的留存率，(e) 再看最终数据效率。</p>
+
+<p><img src="../assets/paper-reading/cli-universe/source-filtering-evidence-figure.png" alt="CLI-Universe 各阶段证据、候选留存与数据效率" /></p>
+
+<p><em>原论文 Figure 2，已替换为从 PDF 4× 渲染后按整张 figure 精确裁剪的高清版本。research refinement 让平均 solver turns 从 5.34 升到 18.43、pass rate 下降 13.3 points；blueprint review 后人类/模型接受率升至 91%/93%；合成 tests 与 Terminal-Bench 2 ground truth 达到 91% pass agreement 和 88% semantic match；五层过滤最终保留 33.6%。右下图进一步显示 CLI-Universe 用更少的 training trajectories 达到有竞争力的 TB-2.0 分数。</em></p>
+
+<h3 id="prompt-和-harness-的披露边界">Prompt 和 harness 的披露边界</h3>
+
+<p>CLI-Universe 论文描述了 agent roles、artifact fields、rubric 与过滤逻辑，但没有公开逐字 prompt appendix，也没有公开生成代码。因此可以确定的信息是：</p>
+
+<ul>
+  <li>prompt 输入包含 taxonomy anchor / realized env / validation target / internal hint；</li>
+  <li>test 与 solution agent 角色隔离；</li>
+  <li>trajectory teacher 是 Kimi-K2.6；</li>
+  <li>benchmark evaluation 使用 Terminus 2、200 turns、avg@4；</li>
+  <li>Codex + GPT-5.4 被用于 test semantic agreement 和 error analysis judge。</li>
+</ul>
+
+<p>但不能声称：</p>
+
+<ul>
+  <li>知道 research agent 的完整 system prompt；</li>
+  <li>知道每轮 refinement 的精确 stop condition；</li>
+  <li>知道所有 synthesis agents 的温度、token budget 与 retry count；</li>
+  <li>production harness 就是 Terminus 2。论文只明确说 Terminus 2 用于主要评测。</li>
+</ul>
+
+<h3 id="监督密度为什么重要">监督密度为什么重要</h3>
+
+<p>Endless 只问“强模型能否至少解出一次”；CLI-Universe 多问了一层：</p>
+
+<blockquote>
+  <p>这条成功 trajectory 是否真的提供了没有它就得不到的监督？</p>
+</blockquote>
+
+<p>hint-free fail / hinted pass 是一个很强的 training-value filter。它可能丢掉本来就容易但仍有用的任务，也依赖 hint 的质量；但它让最终 6K trajectory 的监督密度明显高于“只要成功就收”。</p>
+
+<h3 id="ablationpipeline-组件之外数据该怎样选">Ablation：pipeline 组件之外，数据该怎样选</h3>
+
+<p><img src="../assets/paper-reading/cli-universe/source-ablation-scaling-figure.png" alt="CLI-Universe 的组件消融、模型扩展与数据效率" /></p>
+
+<p><em>原论文 Figure 3，高清重裁版本。组件消融在 1K-task subset、Qwen3-32B 上进行：完整 pipeline 得分 26.7；移除 asset strategy、query rubric 或 test-case rubric 分别降到 20.5、23.3、22.8，说明收益不是某一个 verifier 独立带来的。同一 6K 数据对 8B、14B、32B 分别带来 +8.4、+19.0、+30.0，且相较 TerminalTraj 与 Nemotron 显示更高的数据效率。</em></p>
+
+<p>Figure 3 消融的是 pipeline components；原论文 Table 2 还有两个容易漏掉的 <strong>data-side ablation</strong>：</p>
+
+<p><img src="../assets/paper-reading/cli-universe/source-table2-ablation.png" alt="CLI-Universe Table 2：trajectory selection 与 teacher model ablation" /></p>
+
+<p><em>原论文 Table 2，按两张小表的边界精确裁剪。所有实验的 student 都是 Qwen3-32B，指标是 Terminal-Bench 2.0 avg@4。</em></p>
+
+<p><strong>(a) Trajectory selection</strong></p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Complete (all kept)</code>：保留 10K 条成功、失败和未完成轨迹，得 28.2；</li>
+  <li><code class="language-plaintext highlighter-rouge">Success-only</code>：只保留通过全部 tests 的 6K 条轨迹，得 33.4。</li>
+</ul>
+
+<p>数据量减少 40%，分数反而提高 <strong>5.2 points</strong>。这个实验支持的是一个有限但重要的结论：在本文的多轮 SFT 和 32B student 设置下，失败/未完成 interaction 带来的监督噪声大于额外数据量的收益；它不等价于“失败轨迹对 RL、preference learning 或 error mining 永远没用”。</p>
+
+<p><strong>(b) Teacher model</strong></p>
+
+<ul>
+  <li>DeepSeek-V4-Pro：同一批 CLI-Universe tasks 上采 6K trajectories，student 得 31.2；</li>
+  <li>Kimi-K2.6：同样采 6K，student 得 33.4。</li>
+</ul>
+
+<p>Kimi teacher 高 <strong>2.2 points</strong>，说明 teacher 质量仍会影响最终 student；但更换 teacher 后仍能保持 31.2，也说明收益不只来自某个特定 teacher，pipeline 本身提供了相当一部分稳定监督。</p>
+
+<h3 id="泛化与仍未覆盖的类别">泛化与仍未覆盖的类别</h3>
+
+<p><img src="../assets/paper-reading/cli-universe/source-generalization-figure.png" alt="CLI-Universe Figure 4：跨 benchmark 与细粒度类别结果" /></p>
+
+<p><em>原论文 Figure 4。32B 在 BFCL-v4 从 46.7 提升到 58.0，在 VitaBench 从 15.4 提升到 27.0；TB 2.0 上 Data Processing、Machine Learning、Data Querying、Model Training 的增益最大。Games 与 Video Processing 没有提升，不过这两类各只有 1 个评测样本，适合视为待扩充方向，不宜读成稳定的能力结论。</em></p>
+
+<h3 id="error-study模型究竟在哪里失败">Error study：模型究竟在哪里失败</h3>
+
+<p>分析过程不是让 judge 给一条轨迹贴多个宽泛标签，而是：</p>
+
+<ol>
+  <li>对 Terminal-Bench 2 的每个 task、每个模型运行 <strong>2 条 trajectory rollouts</strong>；</li>
+  <li>只分析 failed trajectories；</li>
+  <li>用 <strong>Codex + GPT-5.4</strong> 阅读完整轨迹；</li>
+  <li>从 9 种 failure modes 中只选一个“对失败最具因果责任”的 primary mode；</li>
+  <li>标签互斥，因此每个模型的一行加总为 100%。</li>
+</ol>
+
+<p>九种错误分成三组：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Failure modes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Execution</td>
+      <td>disobey specification；step repetition；unaware of termination</td>
+    </tr>
+    <tr>
+      <td>Coherence</td>
+      <td>context loss；task derailment；reasoning-action mismatch</td>
+    </tr>
+    <tr>
+      <td>Verification</td>
+      <td>premature termination；no/incorrect verification；weak verification</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="../assets/paper-reading/cli-universe/source-failure-attribution-figure.png" alt="CLI-Universe Figure 5：失败轨迹的 primary failure attribution" /></p>
+
+<p><em>原论文 Figure 5，高清重裁版本。颜色不是性能高低，而是“已经失败的轨迹内部，主要失败原因如何分布”；因此不能从某个色块较小直接推出该模型绝对更强。</em></p>
+
+<p><strong>Frontier models 欠缺在哪里</strong></p>
+
+<ul>
+  <li>Claude-Opus-4.6、GPT-5.3-Codex、GLM-5、DeepSeek-V4-Pro 的最大类都是 <strong>Verification</strong>，占失败的 47%–60%。它们通常已经做出看似合理的实现，但没有可靠确认 goal state 是否真的满足。</li>
+  <li>frontier models 又分成两种相反风格。Opus 更常是 <strong>weak verification</strong>：做了检查但太浅，36%，而 GPT 为 10%；GPT 更常是 <strong>no/incorrect verification</strong>：跳过检查或检查错对象，47%，而 Opus 为 20%。</li>
+  <li>GLM-5 与 DeepSeek-V4-Pro 更接近 GPT 的 verification pattern，但 execution failure 更吵，Execution 占 28%–31%，高于 Opus 的 16% 与 GPT 的 23%。</li>
+</ul>
+
+<p>所以前沿模型的主要问题不是“完全不会开始”，而是最后一公里：把“我做过一些修改”误当成“任务已经被独立验证完成”。</p>
+
+<p><strong>CLI-Universe-32B 欠缺在哪里</strong></p>
+
+<ul>
+  <li>Verification share 降到 27%，但 <strong>Execution</strong> 上升为最大类，占 44%；</li>
+  <li>最突出的单项是 <strong>step repetition 23%</strong>，而四个 frontier baselines 只有 0%–7%；</li>
+  <li>它更常在执行中陷入循环：重复同一命令、重新推导已知事实、修补同一个 bug，却不能保持稳定进展。</li>
+</ul>
+
+<p>这表示 32B 的瓶颈已经与 frontier model 不同：训练数据强化了验证相关行为后，主要短板转向 long-horizon execution stability、working memory 与 loop breaking。严格说 Figure 5 展示的是 failure-profile shift，不能单凭相关性证明某个训练组件“治好了”验证；但它非常明确地指出下一轮数据合成不应只继续堆 tests，还要专门构造需要记住既有事实、检测重复动作并主动换策略的任务。</p>
+
+<hr />
+
+<h2 id="terminal-lego从环境可执行走向-trajectory-可教学">Terminal-Lego：从环境可执行走向 trajectory 可教学</h2>
+
+<p>Terminal-Lego 的论文标题是 <strong>What Makes Interaction Trajectories Effective for Training Terminal Agents?</strong>。它用环境合成搭建 controlled substrate，真正要研究的是：在 task、harness、student 与训练 recipe 都固定时，哪种 teacher trajectory 更适合 SFT。</p>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-lego-official-pipeline.jpg" alt="Terminal-Lego 官方三阶段 task construction pipeline" /></p>
+
+<p><em>Terminal-Lego 官方 pipeline。Stage 1 从 StackOverflow 筛 source，Stage 2 级联生成六类 artifacts，Stage 2.5 用 syntax + LLM reviewer 回流修 tests，Stage 3 完成 Docker round-trip。图中把 Dockerfile 放在 tests 前；当前公开 <code class="language-plaintext highlighter-rouge">task_generator.py</code> 的实际调用顺序则是先生成并 review tests、再生成 Dockerfile。这是 paper-level design 与当前代码实现之间需要明确区分的一处差异。</em></p>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/terminal-lego-pipeline.svg" alt="Terminal-Lego 从真实 issue 到可教学 trajectory 的 pipeline" /></p>
+
+<p><em>自制流程图。前三个环节回答“如何从真实 issue 造出能执行、能验收的任务”；最后的固定 Terminus-2 环节回答“同一任务上，不同 teacher 暴露了什么交互监督”。这正是 Terminal-Lego 相比前五篇多出来的一层。</em></p>
+
+<h3 id="stage-1从-stackoverflow-收真实-failure-mode">Stage 1：从 StackOverflow 收真实 failure mode</h3>
+
+<p>source 不是随机主题词，也不是 skill list，而是 StackOverflow 的真实问题：</p>
+
+<ul>
+  <li>覆盖 90+ technical domains、13 个大类；</li>
+  <li>每个问题必须有 accepted answer，作为 practical solution signal；</li>
+  <li>再用 community vote threshold 做质量过滤；</li>
+  <li>保留 dependency conflict、path error、shell behavior、package install、network configuration 等真实 failure mode。</li>
+</ul>
+
+<p>这里 accepted answer 不是直接复制成 agent 回复。它是后续生成 <code class="language-plaintext highlighter-rouge">solve.sh</code> 的 grounding，使 task seed 同时带着“真实问题”和“可行解法证据”。</p>
+
+<h3 id="stage-2cascaded-task-construction">Stage 2：Cascaded Task Construction</h3>
+
+<p>官方代码明确给出的级联顺序是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>instruction
+→ environment files
+→ reference solution
+→ difficulty
+→ tests: generate + review, up to 3 rounds
+→ Dockerfile
+</code></pre></div></div>
+
+<p>每一步读取上游 artifact，而不是让多个 prompt 独立猜同一个 task。最后写出 Terminal-Bench 风格目录：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>task_xxxxx/
+├── instruction.md
+├── task.toml
+├── environment/
+│   ├── Dockerfile
+│   └── task_file/
+├── solution/
+│   └── solve.sh
+└── tests/
+    ├── test.sh
+    └── test_outputs.py
+</code></pre></div></div>
+
+<p>公开 prompt 的 contract 很具体：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Generator</th>
+      <th>输入</th>
+      <th>输出与关键约束</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Instruction</td>
+      <td>StackOverflow title、tags、body</td>
+      <td>Linux terminal task；根目录 <code class="language-plaintext highlighter-rouge">/app/task_file/</code>；明确 input/output path 与 success criteria</td>
+    </tr>
+    <tr>
+      <td>Environment</td>
+      <td>instruction、title、tags</td>
+      <td>JSON：<code class="language-plaintext highlighter-rouge">files</code> + <code class="language-plaintext highlighter-rouge">directories</code>；生成合理 test data</td>
+    </tr>
+    <tr>
+      <td>Solution</td>
+      <td>instruction、accepted answer、tags、已有文件列表</td>
+      <td>可执行 <code class="language-plaintext highlighter-rouge">solve.sh</code>；容器 <code class="language-plaintext highlighter-rouge">WORKDIR=/app</code>；处理错误并满足输出要求</td>
+    </tr>
+    <tr>
+      <td>Difficulty</td>
+      <td>instruction、tags</td>
+      <td><code class="language-plaintext highlighter-rouge">easy / medium / hard</code>；按单命令、multi-step、domain knowledge 区分</td>
+    </tr>
+    <tr>
+      <td>Tests</td>
+      <td>instruction、files、solution、tags</td>
+      <td><code class="language-plaintext highlighter-rouge">test.sh</code> + <code class="language-plaintext highlighter-rouge">test_outputs.py</code>；只验 solved state，禁止重新运行 <code class="language-plaintext highlighter-rouge">solve.sh</code></td>
+    </tr>
+    <tr>
+      <td>Dockerfile</td>
+      <td>instruction、tags</td>
+      <td>按语言选 base image；安装依赖；<code class="language-plaintext highlighter-rouge">WORKDIR /app</code>；复制 <code class="language-plaintext highlighter-rouge">task_file</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>代码默认使用 OpenAI-compatible chat-completions API 与 <code class="language-plaintext highlighter-rouge">claude-opus-4-6</code>，并为不同 artifact 设置不同 temperature：instruction 较高以换多样性，environment / solution / Dockerfile 较低以换稳定性，tests 更低。</p>
+
+<h3 id="stage-25test-review-loop">Stage 2.5：Test Review Loop</h3>
+
+<p>tests 最多生成三轮。每轮按以下顺序检查：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>generate test JSON
+→ parse JSON
+→ ast.parse(test_outputs.py)
+→ independent LLM review
+→ pass: accept
+→ fail: regenerate
+</code></pre></div></div>
+
+<p>论文图中的 targeted review 列出五类缺陷：重复运行 solution、脆弱 path comparison、hardcoded value、missing imports、assertion mismatch。当前公开代码的 review prompt 显式检查其中四组问题：</p>
+
+<ol>
+  <li>测试是否偷偷用 subprocess 再跑 <code class="language-plaintext highlighter-rouge">solve.sh</code>；</li>
+  <li>是否依赖脆弱的 exact path；</li>
+  <li>是否缺 import 或用了不可用模块；</li>
+  <li>assertions 是否与 reference solution 的实际行为一致。</li>
+</ol>
+
+<p>其中 hardcoded value 没有作为独立 checklist item，但 test-generation prompt 通过 robustness rules 部分覆盖：路径列表用 basename / suffix 比较、内容用包含或 regex、行数忽略空行、优先检查磁盘状态而非解析输出文字。这些约束本质上是在减少 verifier brittleness。</p>
+
+<p>一个值得在分享中指出的实现细节：公开代码在三轮都未通过 review 时，会回退到第一份可解析 candidate；如果 review API 没有返回，代码也默认通过。因此论文里的“独立 review gate”在当前实现中是 <strong>best-effort repair</strong>，不是绝对 hard gate。复现时若追求严格质量，应把这两个 fallback 改为 discard。</p>
+
+<h3 id="stage-3docker-round-trip-verification">Stage 3：Docker Round-Trip Verification</h3>
+
+<p>validator 的闭环是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker build image
+→ start container
+→ copy and run solution/solve.sh
+→ copy and run tests/test.sh
+→ read /logs/verifier/reward.txt
+→ keep only reward &gt; 0
+</code></pre></div></div>
+
+<p>默认 generation workers 为 16，validation workers 为 8，每个 Docker step timeout 为 300 秒。<code class="language-plaintext highlighter-rouge">test.sh</code> 用 pytest 运行 <code class="language-plaintext highlighter-rouge">test_outputs.py</code>，并把 binary reward 写入固定路径。</p>
+
+<p>注意它验证的是 <strong>post-solution positive</strong>。从公开 validator 流程看，没有像 CLI-Universe 那样强制执行 hint-free fail，也没有明确对未解初态执行同一套 tests。因此 Terminal-Lego 的 gate 能证明 reference solution 后可通过，但不能单独证明 verifier 在初态必然失败。若把它用于 RL environment，最好额外补一个 initial-state negative check。</p>
+
+<h3 id="harness-engineeringterminus-2-与-egs">Harness Engineering：Terminus-2 与 EGS</h3>
+
+<p>trajectory collection 固定使用 Terminus-2：</p>
+
+<ul>
+  <li>单个 Docker container 内的 headless terminal；</li>
+  <li>每 turn 输出 <code class="language-plaintext highlighter-rouge">analysis</code>、<code class="language-plaintext highlighter-rouge">plan</code> 与 shell commands；</li>
+  <li>harness 在 tmux session 执行命令并捕获 terminal output；</li>
+  <li>四个 teacher 使用同一 task substrate 与同一 interface。</li>
+</ul>
+
+<p>这样可以把差异归因到 teacher interaction behavior，而不是 scaffold。论文发现最强的 standalone solver 不一定是最好的 teacher：DeepSeek-V3.2 的 benchmark 分数低于 Claude Opus 4.6，但它的 trajectory 训练出的 Qwen3 student 更强。</p>
+
+<p>作者用 <strong>Environment-Grounded Supervision（EGS）</strong>解释这个现象：好的轨迹显式展示 <code class="language-plaintext highlighter-rouge">inspect → act → verify → adapt</code>，而不是直接跳到写操作。对应指标 <strong>Targeted Observation Ratio（TOR）</strong>检查 action target 是否被先前的 <code class="language-plaintext highlighter-rouge">cat / ls / find / grep / head / wc / diff / stat</code> 等 observation 覆盖。</p>
+
+<p>prompt intervention 也很简单：在 system instruction 中要求先充分检查环境与相关文件，并在确认目录结构和文件内容后再修改。它让 Claude 的 TOR 从 2.5% 升到 6.6%，对应的 32B student 从 15.4% 升到 19.5%。</p>
+
+<p>Terminal-Lego 最值得带走的一句话是：</p>
+
+<blockquote>
+  <p>Environment synthesis 决定任务是否可执行；harness engineering 决定轨迹是否把可复用的观察—行动关系暴露给 student。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="六篇工作的真正分歧">六篇工作的真正分歧</h2>
+
+<h3 id="hard-filtering-vs-soft-filtering">Hard filtering vs soft filtering</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>路线</th>
+      <th>何时丢弃</th>
+      <th>优点</th>
+      <th>代价</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Endless</td>
+      <td>build/test 后 + teacher pass@16</td>
+      <td>数据进入 RL 前已知可解</td>
+      <td>16 次 teacher rollout 成本高；teacher ceiling</td>
+    </tr>
+    <tr>
+      <td>TMax</td>
+      <td>build 失败才硬丢；zero-pass 在 RL batch 丢</td>
+      <td>生成吞吐高，容易扩到 15K</td>
+      <td>坏 verifier 可能消耗训练算力</td>
+    </tr>
+    <tr>
+      <td>SkillSynth</td>
+      <td>oracle + rubric，失败可 repair</td>
+      <td>instruction/tests/path 三者更一致</td>
+      <td>harness 复杂；LLM judge 仍可能共偏</td>
+    </tr>
+    <tr>
+      <td>Terminal-World</td>
+      <td>每个 artifact 都 GVR + 五维 judge</td>
+      <td>错误定位细，repair yield 高</td>
+      <td>agent 数多，prompt/interface 维护成本高</td>
+    </tr>
+    <tr>
+      <td>CLI-Universe</td>
+      <td>research、blueprint、smoke、test、hint、fail2pass 多门</td>
+      <td>supervision density 高</td>
+      <td>66.4% 淘汰，单位成功样本成本可能高</td>
+    </tr>
+    <tr>
+      <td>Terminal-Lego</td>
+      <td>AST/LLM test review + solved-state Docker round-trip</td>
+      <td>真实 issue 可扩展；task substrate 适合 matched-teacher 实验</td>
+      <td>当前开源 validator 缺强制 initial-state negative；review 有宽松 fallback</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="../assets/paper-reading/cli-universe/quality-funnel.svg" alt="CLI-Universe 的质量漏斗" /></p>
+
+<p><em>自制质量漏斗。它把 CLI-Universe 的核心设计压缩成一句话：最终 6K 不是任意成功对话，而是经过能力锚定、证据研究、环境实现、test/solution 隔离与 fail-to-pass 后留下的监督单元。</em></p>
+
+<h3 id="diversity-到底指什么">Diversity 到底指什么</h3>
+
+<p>六篇论文的“多样性”不是一回事：</p>
+
+<ul>
+  <li>Endless：task category / complexity / scenario 的<strong>题面多样性</strong>；</li>
+  <li>TMax：九个采样轴与分布平衡的<strong>组合多样性</strong>；</li>
+  <li>SkillSynth：minimal workflow path 的<strong>trajectory diversity</strong>；</li>
+  <li>Terminal-World：skill/team/graph × persona 与 104 file types 的<strong>语义和环境多样性</strong>；</li>
+  <li>CLI-Universe：真实 evidence / constraints / failure modes 的<strong>技术情境多样性</strong>。</li>
+  <li>Terminal-Lego：真实 issue domain 的<strong>问题分布多样性</strong>，以及固定 task 上不同 teacher 的<strong>interaction pattern 多样性</strong>。</li>
+</ul>
+
+<p>一个用于检验 diversity 定义的问题是：</p>
+
+<blockquote>
+  <p>如果 task title 不同，但 solver 永远执行 <code class="language-plaintext highlighter-rouge">cat → python script → save answer</code>，这算多样吗？</p>
+</blockquote>
+
+<p>SkillSynth 对这个问题的回答最直接：不算，必须控制 path 中出现的 scenario-skill pairs。</p>
+
+<h3 id="per-task-image-vs-shared-sandbox">Per-task image vs shared sandbox</h3>
+
+<p>两种工程路线：</p>
+
+<p><strong>Per-task image</strong></p>
+
+<ul>
+  <li>Endless、TMax、CLI-Universe、Terminal-Lego；</li>
+  <li>isolation 强；</li>
+  <li>环境更接近 artifact；</li>
+  <li>build/storage 成本高。</li>
+</ul>
+
+<p><strong>Shared sandbox + per-task setup</strong></p>
+
+<ul>
+  <li>Terminal-World；</li>
+  <li>base environment 复用，启动更快；</li>
+  <li>需要非常严格的 setup scope 与 fresh-state contract；</li>
+  <li>shared base 的工具分布可能成为隐藏先验。</li>
+</ul>
+
+<p>SkillSynth 生成 containerized environment，但论文更关注 synthesis harness，而非镜像缓存策略。</p>
+
+<h3 id="verifier-不是最后补的一段-pytest">Verifier 不是最后补的一段 pytest</h3>
+
+<p><img src="../assets/paper-reading/terminal-agent-env-synthesis/verifier-ladder.svg" alt="Terminal environment verifier 的可靠性阶梯" /></p>
+
+<p><em>自制 verifier 阶梯。只检查文件存在很容易制造假阳性；逐步加入行为 invariant、deterministic edge cases、fail-to-pass、instruction alignment 与 graded criteria，reward 才越来越接近用户真正要求的状态转换。</em></p>
+
+<p>可靠 verifier 至少要满足：</p>
+
+<ol>
+  <li><strong>Initial-state negative</strong>：初态不能通过；</li>
+  <li><strong>Solved-state positive</strong>：oracle / reference solution 后必须通过；</li>
+  <li><strong>Instruction alignment</strong>：不能检查用户没要求的限制；</li>
+  <li><strong>Non-vacuity</strong>：不能只检查文件存在；</li>
+  <li><strong>Determinism</strong>：重跑结果稳定；</li>
+  <li><strong>Robustness</strong>：尽量检查行为或 invariant，而非脆弱的全文相等；</li>
+  <li><strong>No trace inspection</strong>：只看环境终态，不看 agent 自述；</li>
+  <li><strong>Useful resolution</strong>：能产生 binary 或 graded learning signal。</li>
+</ol>
+
+<p>TMax 的 graded verifier 与 CLI-Universe 的 fail-to-pass 可以组合：前者改善 reward resolution，后者保证 state transition 有效。</p>
+
+<hr />
+
+<h2 id="一条可复用的-environment-synthesis-pipeline">一条可复用的 environment synthesis pipeline</h2>
+
+<p>我会采用下面的混合方案：</p>
+
+<h3 id="phase-1coverage-planning">Phase 1：Coverage planning</h3>
+
+<p>从 TMax 学：</p>
+
+<ul>
+  <li>domain / skill / persona / language / task complexity / command complexity；</li>
+  <li>fixture 与 verifier 独立采样；</li>
+  <li>对最终 corpus 做 entropy-based balance audit。</li>
+</ul>
+
+<p>从 SkillSynth 学：</p>
+
+<ul>
+  <li>skill 要有 pre/post scenarios；</li>
+  <li>path 采样做 inverse-frequency weighting；</li>
+  <li>不允许随机 skills 只形成并列 checklist。</li>
+</ul>
+
+<h3 id="phase-2blueprint">Phase 2：Blueprint</h3>
+
+<p>从 Terminal-World 与 CLI-Universe 学：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">instruction</span><span class="pi">:</span> <span class="s">public user request</span>
+<span class="na">initial_files</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">path</span>
+  <span class="pi">-</span> <span class="s">generation_mode</span>
+  <span class="pi">-</span> <span class="s">reproduction_spec</span>
+<span class="na">setup_steps</span><span class="pi">:</span>
+<span class="na">evaluation_criteria</span><span class="pi">:</span>
+<span class="na">internal_hint</span><span class="pi">:</span>
+<span class="na">expected_intermediate_states</span><span class="pi">:</span>
+<span class="na">skill_path</span><span class="pi">:</span>
+<span class="na">evidence</span><span class="pi">:</span>
+</code></pre></div></div>
+
+<p>在生成环境之前做：</p>
+
+<ul>
+  <li>persona-skill relevance；</li>
+  <li>closed-world solvability；</li>
+  <li>instruction/evaluation alignment；</li>
+  <li>evidence availability；</li>
+  <li>safety / license / network constraints。</li>
+</ul>
+
+<h3 id="phase-3artifact-generation">Phase 3：Artifact generation</h3>
+
+<p>按 artifact 类型路由：</p>
+
+<ul>
+  <li>text/code → LLM direct；</li>
+  <li>image/audio/binary/data → deterministic local tool；</li>
+  <li>real package/docs → pinned remote fetch；</li>
+  <li>dependencies/services → environment agent。</li>
+</ul>
+
+<p>每个 agent 只有一个 scope，避免一个模型同时造题、造答案、造测试而发生 shared hallucination。</p>
+
+<h3 id="phase-4executable-qa">Phase 4：Executable QA</h3>
+
+<p>最低门槛：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>build/setup success
+initial probes pass
+final verifier runs
+final verifier(initial) fails
+oracle solution executes
+final verifier(solved) passes
+</code></pre></div></div>
+
+<p>再加：</p>
+
+<ul>
+  <li>repeated-run determinism；</li>
+  <li>instruction ↔ verifier rubric judge；</li>
+  <li>edge-case mutation test；</li>
+  <li>no hidden network dependency；</li>
+  <li>timeout and resource budget；</li>
+  <li>test leakage scan。</li>
+</ul>
+
+<h3 id="phase-5difficulty-calibration">Phase 5：Difficulty calibration</h3>
+
+<p>不要只用“solver turns 多”定义困难。建议同时记录：</p>
+
+<ul>
+  <li>strong-model pass@k；</li>
+  <li>pass@k curve slope；</li>
+  <li>median commands / unique commands；</li>
+  <li>failure recovery count；</li>
+  <li>verifier partial score；</li>
+  <li>wall-clock / resource usage；</li>
+  <li>minimal skill path length。</li>
+</ul>
+
+<p>Learnable band 可以定义为：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>not pass@k = 1.0
+not pass@k = 0.0
+</code></pre></div></div>
+
+<p>而不是把所有最难任务直接投入 RL。</p>
+
+<h3 id="phase-6trajectory-collection">Phase 6：Trajectory collection</h3>
+
+<p>建议保留三种 rollout：</p>
+
+<ul>
+  <li>unguided success；</li>
+  <li>guided success；</li>
+  <li>informative failure。</li>
+</ul>
+
+<p>并记录：</p>
+
+<ul>
+  <li>environment version；</li>
+  <li>agent harness version；</li>
+  <li>model / sampling config；</li>
+  <li>command / observation；</li>
+  <li>observation target 与后续 action target 的 path alignment；</li>
+  <li>verifier output；</li>
+  <li>terminal reason；</li>
+  <li>hint visibility。</li>
+</ul>
+
+<p>从 Terminal-Lego 学，再加两组数据质量指标：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">inspect → act → verify</code> 的 turn pattern 与 TOR；</li>
+  <li>同一批 task 上的 matched-teacher rollout，避免把 task difficulty 误当作 teacher quality。</li>
+</ul>
+
+<p>这样之后才能判断 gain 来自 task、harness、teacher 还是 training recipe。trajectory 过滤也不应只看成功：高 TOR 的 structured failure 可能比“直接猜中答案”的短成功轨迹更有教学价值。</p>
+
+<hr />
+
+<h2 id="三个典型失败例子">三个典型失败例子</h2>
+
+<h3 id="example-a空测试">Example A：空测试</h3>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">test_output_exists</span><span class="p">():</span>
+    <span class="k">assert</span> <span class="n">Path</span><span class="p">(</span><span class="s">"/app/output.json"</span><span class="p">).</span><span class="n">exists</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>问题：agent 写 <code class="language-plaintext highlighter-rouge">{}</code> 也能过。改成：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">test_output_contract</span><span class="p">():</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s">"/app/output.json"</span><span class="p">).</span><span class="n">read_text</span><span class="p">())</span>
+    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="s">"summary"</span><span class="p">,</span> <span class="s">"records"</span><span class="p">}</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"records"</span><span class="p">])</span> <span class="o">==</span> <span class="n">EXPECTED_COUNT</span>
+    <span class="k">assert</span> <span class="n">recompute_summary</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"records"</span><span class="p">])</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="s">"summary"</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>对应论文：Terminal-World 的 verifier prompt 与 CLI-Universe 的 rubric-gated tests。</p>
+
+<h3 id="example-b随机-skill-composition">Example B：随机 skill composition</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>skills = [OCR, nginx config, SQL aggregation]
+</code></pre></div></div>
+
+<p>差的任务：分别 OCR、改 nginx、跑 SQL，三段互不相干。</p>
+
+<p>好的 path：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scanned invoices
+--OCR--&gt; normalized text records
+--load--&gt; SQLite database
+--aggregate--&gt; monthly totals
+--serve--&gt; local HTTP report
+</code></pre></div></div>
+
+<p>对应论文：SkillSynth 的 scenario-mediated skill graph。</p>
+
+<h3 id="example-cbinary-reward-太粗">Example C：binary reward 太粗</h3>
+
+<p>任务：优化图像压缩。</p>
+
+<p>差 verifier：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>compressed.png exists → 1
+</code></pre></div></div>
+
+<p>更好的 verifier：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SSIM &gt;= 0.95
+size &lt;= 0.60 × original
+dimensions unchanged
+</code></pre></div></div>
+
+<p>对应论文：TMax <code class="language-plaintext highlighter-rouge">metric_threshold</code>。再叠加 CLI-Universe：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>initial state fails
+hint-guided solution passes
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="核心结论">核心结论</h2>
+
+<h3 id="结论一环境才是-agent-rl-的-supervision-unit">结论一：环境才是 agent RL 的 supervision unit</h3>
+
+<p>自然语言 task 只是入口。真正被训练的是：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>state → action → observation → state transition → executable reward
+</code></pre></div></div>
+
+<h3 id="结论二多样性必须在多个层级测">结论二：多样性必须在多个层级测</h3>
+
+<p>至少分开：</p>
+
+<ul>
+  <li>instruction diversity；</li>
+  <li>environment / fixture diversity；</li>
+  <li>verifier diversity；</li>
+  <li>minimal skill-path diversity；</li>
+  <li>actual trajectory diversity。</li>
+</ul>
+
+<h3 id="结论三过滤位置决定成本结构">结论三：过滤位置决定成本结构</h3>
+
+<ul>
+  <li>生成时硬过滤：成功样本贵，但进入训练的数据干净；</li>
+  <li>训练时软过滤：环境便宜，但 rollout 可能浪费；</li>
+  <li>最现实的系统可能是分层门槛：便宜静态检查 → 少量 oracle → policy-side soft filter。</li>
+</ul>
+
+<h3 id="结论四prompt-最重要的是-interface-contract">结论四：prompt 最重要的是 interface contract</h3>
+
+<p>可复现的 prompt 不只是“你是一个资深工程师”，而是：</p>
+
+<ul>
+  <li>输入字段是什么；</li>
+  <li>输出 schema 是什么；</li>
+  <li>agent scope 是什么；</li>
+  <li>negative constraints 是什么；</li>
+  <li>error feedback 如何回流；</li>
+  <li>stop / retry / discard 条件是什么。</li>
+</ul>
+
+<h3 id="结论五不要把-sft--rl-指标当成环境质量的唯一证据">结论五：不要把 SFT / RL 指标当成环境质量的唯一证据</h3>
+
+<p>最终 benchmark gain 受到 teacher、student、harness、turn budget、训练算法与数据混合共同影响。环境质量应该先用自身的：</p>
+
+<ul>
+  <li>build rate；</li>
+  <li>fail-to-pass rate；</li>
+  <li>instruction-test agreement；</li>
+  <li>determinism；</li>
+  <li>difficulty distribution；</li>
+  <li>trajectory coverage；</li>
+  <li>unit cost；</li>
+</ul>
+
+<p>来审计。</p>
+
+<p><img src="../assets/paper-reading/cli-universe/source-failure-attribution-figure.png" alt="Terminal agent 失败模式归因" /></p>
+
+<p><em>原论文 Figure 5。失败被拆成 execution、coherence、verification 三组：前沿模型的大量失败来自 premature termination、没有或错误的 verification、weak verification，而不只是不会执行。CLI-Universe-32B 的 verification 类占比明显下降，但 step repetition 与 task derailment 仍突出。这说明 environment synthesis 必须把 verifier 和 inspect–act–verify 行为都视为训练对象，而不是数据生产线末端的附属脚本。</em></p>
+
+<hr />
+
+<h2 id="讨论问题">讨论问题</h2>
+
+<ol>
+  <li>o3 pass@16 全失败的 task，是坏任务，还是超出当前 teacher 能力的好任务？</li>
+  <li>TMax 把 zero-pass task 推到 RL 时过滤，节省了生成成本，但会浪费多少 rollout compute？</li>
+  <li>skill graph 控制了预期 minimal path，agent 实际 trajectory 偏离这条 path 时，应该视为 diversity 还是 noise？</li>
+  <li>hint-free fail / hinted pass 会不会偏向“只有特定解法”的任务？</li>
+  <li>shared sandbox 与 per-task image，哪个更容易发生 hidden dependency leakage？</li>
+  <li>verifier 与 task 由同一模型家族生成时，怎样发现 shared misconception？</li>
+  <li>failed trajectories 应该用于 SFT、RL、preference learning，还是只做 error mining？</li>
+  <li>TOR 奖励 agent 多观察，但怎样防止为了指标机械地重复 <code class="language-plaintext highlighter-rouge">cat</code> / <code class="language-plaintext highlighter-rouge">ls</code>，而不增加真正的 environment grounding？</li>
+</ol>
+
+<hr />
+
+<h2 id="prompt--code--harness-复现索引">Prompt / code / harness 复现索引</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Paper</th>
+      <th>Prompt availability</th>
+      <th>Code / harness availability</th>
+      <th>信息边界</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Endless Terminals</td>
+      <td>论文描述结构；代码仓公开 generation scripts</td>
+      <td>公开；Apptainer + Harbor + SkyRL</td>
+      <td>artifact 文件、3-round repair 与 pass@16 均有依据</td>
+    </tr>
+    <tr>
+      <td>TMax</td>
+      <td>公开代码含 task、initial/final test、fixture/verifier prompt</td>
+      <td>公开；Vanillux2Agent、Harbor、open-instruct</td>
+      <td>field contract 与关键 prompt 片段可直接核验</td>
+    </tr>
+    <tr>
+      <td>SkillSynth</td>
+      <td>公开 graph/trajectory extraction prompts；未完整公开 constructor prompt</td>
+      <td>论文公开 harness 结构</td>
+      <td>schema 与 control flow 可知，完整 constructor 不可复现</td>
+    </tr>
+    <tr>
+      <td>Terminal-World</td>
+      <td>论文附录 D 给出完整分角色 prompt templates</td>
+      <td>论文给 Terminus2 JSON prompt 与 shared sandbox 规格</td>
+      <td>prompt decomposition 与 harness 规格披露最完整</td>
+    </tr>
+    <tr>
+      <td>CLI-Universe</td>
+      <td>未公开逐字 prompt</td>
+      <td>未公开 synthesis implementation；评测用 Terminus 2</td>
+      <td>明确“论文级流程可知，实现参数未披露”</td>
+    </tr>
+    <tr>
+      <td>Terminal-Lego</td>
+      <td>公开 generation / test-review / Dockerfile prompt templates</td>
+      <td>公开 task generator 与 Docker validator；trajectory 固定 Terminus-2</td>
+      <td>6 个 generator 可逐字段核验；review fallback 与 initial-negative 缺口来自当前代码</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+  <li><a href="https://arxiv.org/abs/2601.16443">Endless Terminals: Scaling RL Environments for Terminal Agents</a></li>
+  <li><a href="https://github.com/kanishkg/endless-terminals">Endless Terminals code</a></li>
+  <li><a href="https://arxiv.org/abs/2606.23321">TMax: A Simple Recipe for Terminal Agents</a></li>
+  <li><a href="https://github.com/hamishivi/tmax">TMax code and data-generation prompts</a></li>
+  <li><a href="https://arxiv.org/abs/2604.25727">Toward Scalable Terminal Task Synthesis via Skill Graphs (SkillSynth)</a></li>
+  <li><a href="https://arxiv.org/abs/2605.20876">Terminal-World: Scaling Terminal-Agent Environments via Agent Skills</a></li>
+  <li><a href="https://arxiv.org/abs/2606.22883">CLI-Universe: Towards Verifiable Task Synthesis Engine for Terminal Agents</a></li>
+  <li><a href="https://arxiv.org/abs/2606.03461">What Makes Interaction Trajectories Effective for Training Terminal Agents? (Terminal-Lego)</a></li>
+  <li><a href="https://github.com/SWE-Lego/terminal-lego">Terminal-Lego code and generation prompts</a></li>
+  <li><a href="https://stephen0808.github.io/terminal-lego.github.io/">Terminal-Lego project page</a></li>
+</ul>
+
+            </div>
+        </article>
+
+        
+        
+        
+        
+    </div>
+
+    <aside class="blog-toc-sidebar">
+        <nav id="blog-toc" class="blog-toc-nav" aria-label="Table of contents">
+            <div class="blog-toc-header">
+                <div class="blog-toc-title">On This Page</div>
+                <button
+                    id="blog-toc-toggle"
+                    class="blog-toc-toggle"
+                    type="button"
+                    aria-controls="blog-toc-list"
+                    aria-expanded="true"
+                    aria-label="收起目录"
+                    title="收起目录"
+                >
+                    <svg class="blog-toc-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="blog-toc-list" class="blog-toc-list"></div>
+        </nav>
+    </aside>
+</div>
+
+    </main>
+    <footer class="footer border-top py-2 mt-5 bg-white small">
+    <div class="container-lg">
+        <div class="row my-3">
+            <div class="col-6">
+                <div class="text-muted">
+                    <i>Last updated: Aug 2026</i>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="text-right text-muted">
+                    Built with <a href="https://github.com/luost26/academic-homepage" target="_blank"><i class="fas fa-pencil-ruler"></i> academic-homepage</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <pagefind-config
+        bundle-path="/paper-notes/pagefind/"
+        base-url="/paper-notes/"
+        excerpt-length="30"
+        lang="zh-CN"></pagefind-config>
+    <div class="modal fade site-search-modal" id="siteSearchModal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="siteSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="siteSearchModalLabel">Search</h2>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pagefind-searchbox placeholder="搜索 wiki、论文笔记、关键词..." show-sub-results="true" hide-shortcut="true"></pagefind-searchbox>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/js/bootstrap.min.js" integrity="sha512-XKa9Hemdy1Ui3KSGgJdgMyYlUg1gM+QhL6cnlyTe2qzMCYm4nAZ1PsVerQzTTXzonUR+dmswHqgJPuwCq1MaAg==" crossorigin="anonymous"></script>
+    <script type="module" src="/paper-notes/pagefind/pagefind-component-ui.js"></script>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tocbot@4.36.8/dist/tocbot.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/anchor-js@5.0.0/anchor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            renderMathInElement(document.body, {
+              delimiters: [
+                  {left: '$$', right: '$$', display: true},
+                  {left: '\\[', right: '\\]', display: true},
+                  {left: '$', right: '$', display: false},
+                  {left: '\\(', right: '\\)', display: false}
+              ],
+              throwOnError : false
+            });
+            Prism.highlightAll();
+            
+
+            var siteSearchModal = document.getElementById("siteSearchModal");
+            var siteSearchBox = siteSearchModal ? siteSearchModal.querySelector("pagefind-searchbox") : null;
+            function focusSiteSearch() {
+                window.setTimeout(function() {
+                    if (siteSearchBox && typeof siteSearchBox.focus === "function") {
+                        siteSearchBox.focus();
+                    }
+                }, 80);
+            }
+            if (siteSearchModal && window.jQuery) {
+                window.jQuery(siteSearchModal).on("shown.bs.modal", focusSiteSearch);
+            }
+            document.addEventListener("keydown", function(event) {
+                var key = String(event.key || "").toLowerCase();
+                var isSearchShortcut = key === "k" && (event.metaKey || event.ctrlKey);
+                var isModalOpen = siteSearchModal && siteSearchModal.classList.contains("show");
+                var target = event.target;
+                var isTyping = target && (
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.isContentEditable
+                );
+                if (!isSearchShortcut || (isTyping && isModalOpen) || !siteSearchModal || !window.jQuery) return;
+                event.preventDefault();
+                window.jQuery(siteSearchModal).modal("show");
+            });
+        });
+    </script>
+    
+    <script src="/paper-notes/assets/js/blog.js"></script>
+    
+    <script src="/paper-notes/assets/js/common.js"></script>
+</body>
+</html>

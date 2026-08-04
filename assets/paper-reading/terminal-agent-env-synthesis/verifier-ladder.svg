@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">Terminal environment verifier 可靠性阶梯</title>
+  <desc id="desc">从只检查文件存在，到检查确定性行为、fail-to-pass、instruction alignment 与 graded reward。</desc>
+  <rect width="1280" height="620" fill="#f7f8fc"/>
+  <text x="64" y="68" font-family="Inter,Noto Sans SC,sans-serif" font-size="34" font-weight="700" fill="#172033">Verifier 可靠性阶梯</text>
+  <text x="64" y="104" font-family="Inter,Noto Sans SC,sans-serif" font-size="18" fill="#5b6578">越往上，reward 越能代表用户真正要求的状态转换</text>
+  <g font-family="Inter,Noto Sans SC,sans-serif">
+    <rect x="70" y="455" width="210" height="90" rx="14" fill="#f2c8cf"/>
+    <text x="175" y="492" text-anchor="middle" font-size="18" font-weight="700" fill="#81273a">Existence only</text>
+    <text x="175" y="522" text-anchor="middle" font-size="15" fill="#81273a">文件存在就通过</text>
+
+    <rect x="300" y="380" width="210" height="165" rx="14" fill="#f7ddb7"/>
+    <text x="405" y="420" text-anchor="middle" font-size="18" font-weight="700" fill="#87511b">Exact output</text>
+    <text x="405" y="450" text-anchor="middle" font-size="15" fill="#87511b">内容 / exit code 正确</text>
+    <text x="405" y="480" text-anchor="middle" font-size="15" fill="#87511b">但可能过度脆弱</text>
+
+    <rect x="530" y="305" width="210" height="240" rx="14" fill="#d9e7ba"/>
+    <text x="635" y="345" text-anchor="middle" font-size="18" font-weight="700" fill="#41611e">Behavioral</text>
+    <text x="635" y="375" text-anchor="middle" font-size="15" fill="#41611e">invariant / protocol</text>
+    <text x="635" y="405" text-anchor="middle" font-size="15" fill="#41611e">deterministic edge cases</text>
+
+    <rect x="760" y="230" width="210" height="315" rx="14" fill="#bddfda"/>
+    <text x="865" y="270" text-anchor="middle" font-size="18" font-weight="700" fill="#1d625c">Fail-to-pass</text>
+    <text x="865" y="300" text-anchor="middle" font-size="15" fill="#1d625c">initial 必须失败</text>
+    <text x="865" y="330" text-anchor="middle" font-size="15" fill="#1d625c">oracle 后必须通过</text>
+    <text x="865" y="360" text-anchor="middle" font-size="15" fill="#1d625c">排除 vacuous test</text>
+
+    <rect x="990" y="155" width="220" height="390" rx="14" fill="#cfd1f5"/>
+    <text x="1100" y="195" text-anchor="middle" font-size="18" font-weight="700" fill="#403a8d">Aligned + graded</text>
+    <text x="1100" y="225" text-anchor="middle" font-size="15" fill="#403a8d">instruction ↔ tests</text>
+    <text x="1100" y="255" text-anchor="middle" font-size="15" fill="#403a8d">metric / fuzz / corpus</text>
+    <text x="1100" y="285" text-anchor="middle" font-size="15" fill="#403a8d">partial learning signal</text>
+  </g>
+  <path d="M90 135 L1190 135" stroke="#7e8799" stroke-width="3"/>
+  <path d="M1190 135 L1168 123 M1190 135 L1168 147" stroke="#7e8799" stroke-width="3"/>
+  <text x="940" y="126" font-family="Inter,Noto Sans SC,sans-serif" font-size="15" fill="#5b6578">更可信的 reward</text>
+</svg>
