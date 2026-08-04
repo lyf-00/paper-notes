@@ -386,6 +386,17 @@ $$
 
 这套分层的重点是 **常驻上下文与可检索档案分离**。`MEMORY.md` 不是无限增长的历史仓库，而是小而精选的核心；daily notes 和 transcript 承担大容量 episodic storage。若 `MEMORY.md` 超出 bootstrap budget，磁盘文件仍完整，但注入副本会被截断，因此“文件存在”不代表“模型看见了全部内容”（[Memory overview](https://docs.openclaw.ai/concepts/memory)）。
 
+#### 四类工作区文件的精确语义
+
+| 文件 | 谁维护 | 何时进入模型 | 适合内容 | 不适合内容 |
+|---|---|---|---|---|
+| `USER.md`（可选） | 人、显式记忆请求、受控 consolidation | session 启动时以独立小预算加载；长期 session 会刷新 | 稳定偏好、沟通方式、关系、活跃项目；写成 `Always/Prefer/Never` 式 directive | 原始聊天记录、网页摘录、一次性任务状态 |
+| `MEMORY.md` | 显式用户请求或 Dreaming 的 deep consolidation | session 启动时按 bootstrap budget 加载；可信 trigger 还可在相关 turn 靠近 query 注入 | 耐久的非 profile 事实、长期决定、简短结论 | 每日流水、完整 transcript、无限增长的知识库 |
+| `memory/YYYY-MM-DD.md` 与 `memory/YYYY-MM-DD-<slug>.md` | 正常工作中的 agent、session-memory hook、pre-compaction flush | 普通 turn 不常驻；bare `/new` 或 `/reset` 会自动加载今天和昨天的 dated notes；其余通过检索读取 | 观察、进度、上下文、session 摘要、尚未确认是否耐久的事实 | 默认自动执行的规则或硬权限 |
+| `DREAMS.md` / `dreams.md` | Dreaming phase 与 grounded backfill | **永不作为普通 memory 自动注入，也不作为晋升来源** | 人类审阅用的 Dream Diary、phase 摘要、rewrite 数量和 diff highlights | agent 的事实 source of truth |
+
+默认 workspace 是 `~/.openclaw/workspace`。Builtin engine 会索引已有的 `USER.md`、`MEMORY.md` 和 `memory/*.md`；它不会自动创建 `USER.md`。默认 chunk 大约是 **400 tokens、80-token overlap**，索引位于每个 agent 自己的 SQLite 数据库 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`。文件变化经过约 1.5 秒 debounce 后增量重建；provider、embedding model、chunking、sources 或 scope 改变时，索引 identity 也会变化，需要显式重建（[Builtin memory engine](https://docs.openclaw.ai/concepts/memory-builtin)）。
+
 ### 5.3 `USER.md` 与 `MEMORY.md` 为什么分开
 
 `USER.md` 是用户模型层，适合写：
@@ -397,20 +408,37 @@ $$
 
 `MEMORY.md` 则适合写非 profile 的耐久事实、长期决定和短摘要。偏好变化时，正确做法不是并排追加“用户喜欢简洁”和“用户喜欢详细”，而是把旧 directive 标为 superseded 或原位更新。分开后，召回策略也可以不同：事实需要相关性，偏好更需要靠近当前 query 的 directive restatement。
 
+#### Action-sensitive memory：不只记事实，还要记行动边界
+
+如果一条记忆会改变未来行为，就应同时记录它**何时可执行、何时失效、谁有权批准，以及不能做什么**。特别是以下内容：临时授权、审批要求、跨 session handoff、安全操作窗口、到期限制和“在某条件前不要行动”。
+
+```markdown
+- API migration 正在另一个 session 设计。本 session 的发现只能作为设计输入；
+  在迁移方案被 owner 批准前，不要修改 API implementation。
+  Observed: 2026-08-04; Owner: user; Expires/unlocks: migration plan approved.
+```
+
+这种写法比“API migration 正在进行”多保存了行动条件，降低未来 agent 把背景事实误解成执行授权的风险。但 memory 只能保存 approval context，不能实施 policy；真正的写权限仍由 approval、sandbox、OS ACL 和 scheduled-task policy 控制。
+
 ### 5.4 写入路径：先落 episodic，再晋升 curated
 
-在 **7.2 预览/当前文档架构** 中，长期 memory 的主写入者不是普通回复 agent，而是 background dreaming consolidation：
+在 **7.2 预览/当前滚动文档架构** 中，长期 memory 的主写入者不是普通回复 agent，而是 background dreaming consolidation。Dreaming 不是“模型睡觉时自由联想”，而是一个有确定性 gate、有 provenance 限制、有审计记录的离线整理 pipeline：
 
 ```text
 交互式会话 / session end / pre-compaction flush
   -> daily notes + transcripts（episodic）
   -> 建索引并记录 provenance
-  -> Dreaming 的确定性 gate
-  -> 有界的 consolidation model turn
+  -> Light：去重、暂存、积累 reinforcement
+  -> REM：按主题反思、形成 recurring-theme signals
+  -> Deep：确定性 gate + 有界 consolidation model turn
   -> merge / dedupe / supersede
-  -> MEMORY.md / USER.md
-  -> DREAMS.md 审阅记录与 pre-image
+  -> MEMORY.md
+  -> DREAMS.md 审阅记录；旧 MEMORY.md pre-image 存入 SQLite plugin state
 ```
+
+![OpenClaw memory 从 episodic evidence 经确定性 Dreaming gate 和有界 consolidation 进入长期记忆的写入流程](assets/wiki/openclaw-architecture-and-memory-system/memory-write-pipeline.png)
+
+这张图最重要的分界是中间两步：**Dreaming gate 是确定性代码，Consolidation 才使用生成式模型**。左边的 notes、transcript 和 flush 只是证据来源；它们不会因为被保存或被 embedding 就自动成为长期记忆。图中终点写成 `MEMORY.md / USER.md`，表达 curated core 的整体概念；但当前滚动版 [Dreaming 文档](https://docs.openclaw.ai/concepts/dreaming)进一步收紧了实现口径：自动 long-term promotion 只写 `MEMORY.md`，`USER.md` 主要由显式用户模型维护路径更新。
 
 这样做有三个理由：
 
@@ -418,7 +446,180 @@ $$
 2. 同一事实被多次召回、跨天出现，比一次自信的模型判断更适合作为晋升信号；
 3. consolidation 可以集中做去重、覆盖旧版本、控制 bootstrap budget 和写入并发。
 
-Dreaming 的 deep phase 先用确定性信号筛选：相关性、召回频率、query diversity、recency、跨日重复和概念丰富度；`untrusted` 与 `system` 来源在进入 prompt 之前就被结构性排除。随后模型只处理已经通过 gate 的候选，输出还要经过结构校验、容量限制和“不能大量丢失旧条目”的保护。写回 `MEMORY.md` 前再次比较输入时的 content hash，并用 atomic rename；发生并发编辑时放弃 rewrite，退回 append-only 路径（[Dreaming](https://docs.openclaw.ai/concepts/dreaming)）。
+#### 实现机制：代码怎样把 Memory 接入 agent loop
+
+`memory-core` 是一个 plugin，而不是散落在 system prompt 中的一组约定。入口文件在 [`extensions/memory-core/index.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/index.ts#L297-L335)，注册了四类 runtime surface：
+
+1. `registerMemoryCapability(...)`：向 host 提供 bootstrap prompt section、pre-compaction flush plan 和 memory runtime；
+2. `memory_search`：延迟加载搜索实现，输入 query、结果数、最低分和 corpus；
+3. `memory_get`：按 path 和 line range 有界读取原文；
+4. `intent` 与 lifecycle hooks：处理 prospective memory、Dreaming 调度和 prompt-build 阶段的召回。
+
+Builtin backend 的实现分散在 [`extensions/memory-core/src/memory/`](https://github.com/openclaw/openclaw/tree/main/extensions/memory-core/src/memory)：
+
+```text
+Markdown files
+  -> watcher / sync controller
+  -> chunk + content hash
+  -> FTS5 rows -------------------------\
+  -> embedding provider -> vector rows ---+-> hybrid ranking
+  -> provenance / time / importance ------/
+  -> memory_search snippet
+  -> memory_get 回读可信原文范围
+```
+
+这里的 manager 被拆成 source sync、embedding cache、FTS state、vector write、search preflight、hybrid/MMR 和 project ranking 等模块。这样 provider 不可用、vector extension 不可用、index identity 失配和 source 文件变化可以分别处理，而不是把所有故障都表现为“搜索为空”。
+
+Dreaming 的 controller 位于 [`extensions/memory-core/src/dreaming.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming.ts)。它维护一个 `delivery: none` 的 isolated cron，执行时先运行 phase ingestion，再调用 `rankShortTermPromotionCandidates(...)`，最后把通过 gate 的 candidates 交给 `applyShortTermPromotions(...)`。代码中的调用顺序可直接查看 [`dreaming.ts#L596-L685`](https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming.ts#L596-L685)。
+
+#### 到底哪里使用 LLM？
+
+最容易产生的误解是“用了 embedding 就等于用了 LLM”。这里应区分 **embedding model** 和 **生成式 LLM/agent turn**：
+
+| 环节 | 是否使用生成式 LLM | 实际机制 |
+|---|---|---|
+| Markdown file watch、chunk、hash、SQLite/FTS 写入 | 否 | 文件系统、token/chunk 代码和数据库事务 |
+| Vector indexing | 否（但使用 embedding model） | 文本映射为向量；不生成记忆内容、不决定是否晋升 |
+| BM25/vector merge、recency、importance、MMR、project boost | 否 | 数学打分与确定性排序 |
+| Trigger recall、strong-hit 判断 | 否 | lexical/vector prefilter、threshold、最多注入数量和 scope 检查 |
+| Recall-intent 判断 | 默认否 | [`active-memory/escalation.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/active-memory/escalation.ts#L1-L66) 使用多语言 regex，结合“Lane 1 是否已有强命中”决定是否升级 |
+| 普通回复中按用户要求“记住” | 是 | 当前主 agent LLM 理解自然语言并选择写哪个 Markdown surface；实际文件写入仍受工具和权限约束 |
+| Pre-compaction memory flush | 是 | compaction 前运行一次 silent housekeeping agent turn，让模型抽取尚未落盘的重要事实；它可能漏写 |
+| Active Memory deep recall | **是** | 在 `before_prompt_build` 中启动一个 blocking embedded agent，只允许 memory tools；它搜索、读取并把证据压成短 summary |
+| Dreaming Light/REM 的候选整理与 phase signal | 核心筛选主要是确定性代码 | 读取 daily/transcript、去重、相似度、时间窗口和 reinforcement；可另启 narrative sub-agent 写人类可读 Diary |
+| Dreaming Deep candidate ranking 与 provenance gate | **否** | 六项加权评分、`minScore/minRecallCount/minUniqueQueries`、origin allowlist 和 live-snippet rehydrate |
+| Deep consolidation rewrite | **是** | 有界 sub-agent 根据合格 candidates + 当前 `MEMORY.md` 合并、去重、supersede；随后代码验证结构、引用、预算和旧条目损失率 |
+| Dream Diary narrative | **是，但非事实写入** | 后台 sub-agent 把 fragments/themes/promotions 写成人类可读叙事；失败可写 fallback entry，Diary 永不作为 promotion source |
+
+Active Memory 的真实 LLM 调用可以在 [`extensions/active-memory/recall-run.ts#L246-L313`](https://github.com/openclaw/openclaw/blob/main/extensions/active-memory/recall-run.ts#L246-L313) 看到：代码先构建 recall prompt，再调用 `runEmbeddedAgent(...)`，传入 model、timeout、`toolsAllow`、`disableMessageTool: true` 和 lightweight context。它不是让主回复模型凭空“回忆”，而是先运行一个隔离的、只读 memory researcher：
+
+```text
+before_prompt_build
+  -> eligibility / private scope / timeout（code）
+  -> Lane 1 trigger recall（code + embedding，可无生成式 LLM）
+  -> recall intent + no strong hit（regex/code）
+  -> runEmbeddedAgent（生成式 LLM）
+       -> memory_search / memory_get only
+       -> NONE 或 bounded summary
+  -> summary 作为 hidden untrusted prefix 注入主回复
+  -> 主回复 LLM 使用该补充上下文回答
+```
+
+Dreaming 则可能调用两类不同的生成式 turn：
+
+1. **Consolidation sub-agent**：负责语言层面的 merge、dedupe、supersede 和紧凑改写；入口实现见 [`dreaming-consolidation.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming-consolidation.ts)。它只接收确定性 gate 已放行的 owner/agent candidates。
+2. **Narrative sub-agent**：只负责 `DREAMS.md` 的可读叙事。源码 [`dreaming-narrative.ts#L215-L305`](https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src/dreaming-narrative.ts#L215-L305) 会以独立 session/lane 调用 subagent，最多取有界 fragments/themes/promotions，并设置 `deliver: false`。
+
+因此可以把 LLM 的权限边界概括为：
+
+```text
+LLM 可以：理解、摘要、合并、发现语言上的重复或过时关系
+LLM 不可以：伪造 provenance、绕过 threshold、扩大 scope、跳过预算校验、直接认定 rewrite 安全
+```
+
+这正是 OpenClaw Memory 实现区别于“每轮让模型自己决定记住什么”的核心：**模型负责语义判断，代码负责资格、边界、时序和 commit**。
+
+#### Dreaming 到底读什么、写什么
+
+Dreaming 可读取 short-term recall state、daily notes，以及经过脱敏的 eligible session transcript。只有交互式 session 可以进入 transcript ingestion；cron、heartbeat、sub-agent 和 unknown session 不生成 durable candidate。系统还会移除 runtime 标记的 recalled context，避免“旧 memory 被注入 → transcript 又学一次 → 频率虚增”的自我强化环。
+
+它写入三个不同用途的表面：
+
+| 表面 | 内容 | 是否会成为长期事实 |
+|---|---|---|
+| `memory/.dreams/` | recall store、phase signals、ingestion checkpoint、lock 等机器状态 | 只是候选和信号，不直接等于长期 memory |
+| SQLite-backed pre-image state | 每次接受 rewrite 前的旧 `MEMORY.md` | 用于审计和恢复，不注入模型 |
+| `DREAMS.md` 与可选 `memory/dreaming/<phase>/YYYY-MM-DD.md` | Light/REM/Deep 摘要、Diary、added/merged/superseded 计数和 diff highlights | 仅供人类审阅，明确排除在 promotion source 之外 |
+| `MEMORY.md` | Deep phase 最终通过验证的 durable entries | 是；这是 long-term promotion 的唯一最终写入面 |
+
+#### Light、REM、Deep 三阶段
+
+| 阶段 | 做什么 | 为什么不能直接写 `MEMORY.md` |
+|---|---|---|
+| **Light** | 读取近期 short-term signals、daily notes 和可用的 redacted transcript；去重并暂存 candidate lines；记录 reinforcement | 一次出现可能只是噪声，先整理证据而不做永久承诺 |
+| **REM** | 从近期 traces 中形成主题与反思摘要，识别 recurring idea；给 deep ranking 增加小幅、随时间衰减的 phase boost | 主题总结是模型解释，不应未经 provenance/gate 就成为事实 |
+| **Deep** | 重新从 live daily file 读取 snippet，跳过已删除或变更的旧引用；计算分数并检查所有 threshold；只把合格候选交给 consolidation sub-agent | 只有这一阶段既检查资格又验证最终 rewrite，才允许落入 curated core |
+
+“重新从 live file 读取”很重要：候选 store 中记着某段旧 snippet，不代表它现在仍有效。如果人类已删除或修正 daily note，Deep 不能拿缓存旧文本继续晋升。
+
+#### Deep ranking：什么样的信息会“毕业”
+
+当前官方文档列出六个基础信号，外加 Light/REM reinforcement：
+
+| 信号 | 权重 | 直觉 |
+|---|---:|---|
+| Relevance | 0.30 | 这条内容被检索出来时，与真实 query 有多相关 |
+| Frequency | 0.24 | 它积累了多少次 short-term signal |
+| Query diversity | 0.15 | 是否在不同 query/日期语境中都有用，而不是同一句话重复刷分 |
+| Recency | 0.15 | 最近是否仍然活跃，按时间衰减 |
+| Consolidation | 0.10 | 是否跨多天重复出现 |
+| Conceptual richness | 0.06 | snippet/path 中是否包含足够概念信息，而不是空泛句子 |
+
+可把基础分数近似写成：
+
+$$
+S = 0.30R + 0.24F + 0.15D + 0.15T + 0.10C + 0.06K + B_{light/rem}
+$$
+
+但 **总分过线仍不够**。`minScore`、`minRecallCount`、`minUniqueQueries` 必须同时通过；而 `untrusted`、`system` provenance 是资格否决，不是扣几分。换言之，恶意网页被搜索一百次也不能因此晋升。
+
+#### Consolidation model 能做什么，不能做什么
+
+确定性 gate 之后，模型拿到：合格的 owner/agent candidates、来源/观察时间/session kind/supersession key、daily-note 行号引用，以及当前 `MEMORY.md`。它可以：
+
+- 合并重复事实；
+- 用 supersession key 淘汰过时版本；
+- 把长 observation 压成紧凑 durable statement；
+- 为新条目保留 `Source: path#Lx-Ly`；
+- 添加最多三个 trigger concepts 和 `1..10` importance annotation。
+
+一个 accepted rewrite 必须同时满足：结构可解析、每个 promoted candidate 都有 source reference、文件仍在 bootstrap-safe budget 内、丢失的旧条目比例不超过 `phases.deep.maxPriorEntryLossFraction`（当前默认 `0.25`）。每条 promoted snippet 默认最多约 `160` estimated tokens。
+
+写回前还会重新比较开始 consolidation 时记录的 `MEMORY.md` content hash，并通过 atomic rename 替换。若人类编辑器或另一 session 已修改文件，rewrite 被放弃；模型不可覆盖并发的新内容。模型不可用、结构验证失败或 rewrite 不安全时，本轮退回 append-only promotion，而不是阻塞用户回复。
+
+#### Dream Diary 不是“梦里的事实库”
+
+每个 phase 有足够材料后，`memory-core` 可以运行 best-effort background sub-agent，向 `DREAMS.md` 追加一段便于人阅读的 narrative。默认使用 runtime model；配置 `dreaming.model` 时需要允许 model override，并可用 allowlist 限制。配置模型不可用时只对 model-unavailable 错误回退一次；trust/allowlist 失败不会静默绕过。
+
+Diary 的定位是 **解释与审阅**：它告诉你系统看到了哪些主题、Deep 增加/合并/覆盖了什么。它本身不参与下一轮晋升，也不会因为写得像事实就进入 `MEMORY.md`。这条单向边界防止模型对自己生成的反思反复引用并放大。
+
+#### 调度、手动预览与历史 backfill
+
+当前滚动文档中 Dreaming 默认开启，`memory-core` 自动维护一个去重的 recurring cron，默认 `0 3 * * *`。可以用以下入口观察而不是盲信后台模型：
+
+```bash
+/dreaming status
+/dreaming on
+/dreaming off
+
+openclaw memory status --deep
+openclaw memory promote                 # 预览候选
+openclaw memory promote --apply         # 明确应用
+openclaw memory promote-explain "router vlan"
+openclaw memory rem-harness             # 无写入预览 REM/Deep 结果
+```
+
+历史 daily notes 可通过 grounded backfill 进入审阅流程：`rem-backfill` 先把可追溯的结果写入 `DREAMS.md`；只有带 `--stage-short-term` 才把候选放入正常 short-term evidence store，而且仍要经过未来的 Deep promotion，绝不会直接写 `MEMORY.md`。`--rollback` 和 `--rollback-short-term` 可移除 backfill 产物。外部 archive file 中自报的 owner 字段不可信，未有认证 provenance contract 时不能进入 short-term staging。
+
+```json5
+{
+  plugins: {
+    entries: {
+      "memory-core": {
+        config: {
+          dreaming: {
+            enabled: true,
+            timezone: "Asia/Shanghai",
+            frequency: "0 3 * * *"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+这整条流程的核心不是仿生名字，而是 **把高延迟、需要跨时间证据的写入判断从 reply hot path 移到后台，同时让资格、来源、容量、并发和回滚仍由确定性机制控制**（[Dreaming](https://docs.openclaw.ai/concepts/dreaming)）。
 
 ### 5.5 Pre-compaction memory flush
 
@@ -481,6 +682,27 @@ daily note 默认按 30 天半衰期衰减，`MEMORY.md` 与 `USER.md` 等 curat
 
 每次 inbound message 都做快速 prefilter，强匹配最多注入 3 条隐藏 context。Daily notes、导入 transcript 和普通 session transcript 即使匹配很强，也不会自动进入 ordinary turn；这是安全边界，不只是性能优化。
 
+#### 索引、搜索和读取是三个不同动作
+
+1. **Index**：把 Markdown 切成 overlapping chunks，生成 FTS term index 和可选 embedding，并把来源、时间、importance、trigger、project 等 metadata 写入 SQLite。
+2. **Search**：`memory_search` 返回相关 snippet、分数和 source path；适合“不知道在哪个文件”的问题。
+3. **Get**：`memory_get` 按已知 path/line range 读取原文；适合 search 命中后核对上下文，避免只凭截断 snippet 下结论。
+
+索引是可重建的派生数据，不是 source of truth。Embedding cache 默认开启，避免文件未变化时重复付费；SQLite WAL 会在周期和 shutdown 时 checkpoint。若 `sqlite-vec` 不可用，builtin backend 可退到进程内 cosine similarity，但 embedding provider 不可用与 vector extension 不可用是两种不同故障，`memory status --deep` 会分别报告。
+
+#### Provider 失败语义
+
+- 未配置 provider、旧的 `auto`，或显式 `provider: "none"` 时，可以运行 FTS-only lexical recall。
+- 显式指定远程 provider 后，如果认证、网络或 endpoint 在运行时失败，当前文档要求返回 unavailable，而不是悄悄改用关键词结果；这样错误配置不会伪装成“搜索质量突然变差”。
+- 切换 provider、model、embedding dimensions、input type、chunking 或 sources 会改变 index identity。系统会暂停不兼容的 vector search，直到用户运行 `openclaw memory status --index --agent <id>` 或 `openclaw memory index --force --agent <id>`。
+- Codex OAuth 只覆盖 chat/completion，不自动提供 embedding 权限；使用 OpenAI embedding 仍需要对应 API key，或改用 local/Ollama/其他 provider。
+
+#### Recency、MMR 与多模态的边界
+
+Builtin ranking 支持 semantic + lexical hybrid、importance 和 dated-note recency。30 天半衰期意味着一条 dated note 过 30 天后，recency 部分只剩一半；`MEMORY.md` 和非 dated curated files 视为 evergreen。MMR 用于减少多个 near-duplicate hit，但是否启用以及具体 tuning 应以当前 config reference 为准。
+
+使用 `gemini-embedding-2-preview` 时，可以索引 `memory.search.extraPaths` 下的图片和音频；默认 `MEMORY.md`/`memory/*.md` 仍是 Markdown-only，query 仍是文本。这是“给外部知识路径加多模态检索”，不是把任意聊天附件自动变成长期记忆。
+
 ### 5.8 召回路径二：Active Memory deep-recall sub-agent
 
 普通 flat retrieval 擅长直接事实，不擅长“我们上个月为何放弃方案 A？”这类跨 session、时间关系或 multi-hop 问题。**7.2 预览/当前文档** 的 Active Memory 增加一个阻塞式、工具受限的 memory sub-agent：
@@ -507,6 +729,40 @@ daily note 默认按 30 天半衰期衰减，`MEMORY.md` 与 `USER.md` 等 curat
 - 不改变 session key、delivery route 或 session tool 权限。
 
 这个“默认 fail narrow”的设计比把所有历史对话统一塞进向量库更安全，也更容易解释为何某条记忆可见。
+
+#### Active Memory 的运行资格与延迟成本
+
+Active Memory 只面向 user-facing、interactive、persistent conversation。Headless one-shot、heartbeat、background run、sub-agent/internal helper 和普通 `agent-command` path 不运行它。它有两条 targeting 路径：
+
+1. `memory.search.rememberAcrossConversations`：个人 agent 的推荐入口，只允许同一 agent 的识别过的私有 conversation；当前 conversation 被排除。
+2. `plugins.entries.active-memory.config.agents`：高级入口，再由 `allowedChatTypes`、`allowedChatIds`、`deniedChatIds` 缩小范围；它不能把产品级 private-only recall 扩大到 group。
+
+默认 `mode: "escalate"`；`always` 会在每个 eligible turn 都运行 blocking recall，延迟与成本更高；`off` 关闭 deep lane 但不卸载 plugin。Session 可用 `/active-memory off|on|status` 临时暂停；global form 需要 owner 或 `operator.admin`。
+
+```json5
+{
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          mode: "escalate",
+          agents: ["main"],
+          allowedChatTypes: ["direct"],
+          timeoutMs: 15000,
+          maxSummaryChars: 220,
+          persistTranscripts: false,
+          toolsAllow: ["memory_search", "memory_get"]
+        }
+      }
+    }
+  }
+}
+```
+
+`toolsAllow` 只接受具体 memory tool 名；wildcard、`group:*`、`read`、`exec`、`message`、`web_search` 等会被过滤。没有可用 recall tool、sub-agent 返回 `NONE`、超时或失败时，主回复照常继续。若开启 `persistTranscripts`，隐藏 recall run 会写到 `agents/<agent>/sessions/active-memory/*.jsonl`；这包含隐藏 prompt 和召回内容，默认关闭是更安全的选择。
+
+调试时可开 `/verbose on` 查看 status/elapsed/query/summary length，开 `/trace on` 查看简短 debug summary。第一次 Gateway restart 后可能因为模型与 embedding index 冷启动而超时；这时应检查 setup grace、provider health 和 index status，而不是直接把模式改成 `always`。
 
 ### 5.9 Project-scoped memory
 
@@ -643,6 +899,48 @@ OpenClaw 把 memory provider 做成 plugin slot：
 - **memory-wiki（当前文档）**：不替换 active memory provider，而是在其旁边编译 provenance-rich wiki，维护 claims、evidence、contradiction、freshness、dashboard 和 lint。
 
 因此，Markdown 是人类可编辑的事实表面，SQLite/vector index 是派生的检索结构，plugin 可以替换检索与 capture 行为，knowledge wiki 则是更高层的整理视图。不要把 index 当 source of truth；损坏时应能从文件重建。
+
+#### Backend 怎么选
+
+| Backend | 适合 | 代价/边界 |
+|---|---|---|
+| Builtin `memory-core` | 大多数个人安装；希望零额外服务、FTS + vector + hybrid、完整 provenance/Dreaming 集成 | 高级 reranking/query expansion 较少；依赖 embedding provider 才有 semantic lane |
+| QMD | 本地优先、需要 reranking、query expansion、额外目录和可选 transcript export | 多一个 sidecar 与 collection/sync 运维面；`search` 是 BM25-only，`vsearch/query` 才要求 vector readiness |
+| Honcho | 希望自动 user modeling、跨 session 与 multi-agent awareness | 外部 provider 带来数据边界、可用性和供应商依赖 |
+| LanceDB plugin | 想要 auto-capture/auto-recall、LanceDB 与 Ollama-compatible embedding | Active Memory 工具变为 `memory_recall`；不自动获得 builtin 的 protected private transcript authorization |
+| memory-wiki | 希望把 durable memory 编译成 claims/evidence/contradiction/freshness 可审计知识库 | 它是旁路知识层，不替换 active memory provider，也不拥有 promotion/Dreaming |
+
+#### 从 Codex、Claude Code、Hermes 导入
+
+Control UI 的 Import Memory 只复制 Markdown，不搬运凭据、配置、skills 或 raw transcript：
+
+- Codex：`~/.codex/memories`（或 `CODEX_HOME/memories`）中的 consolidated `MEMORY.md`、`memory_summary.md`；不导入 rollout/transcript。
+- Claude Code：各项目 auto-memory 目录中的 Markdown，以及配置的 `autoMemoryDirectory`；不导入 project instructions、session、settings、credentials。
+- Hermes：检测到的 `MEMORY.md` 与 `USER.md`；不导入 config、credentials、skills。
+
+导入结果放在 `memory/imports/<source>/`，会被 `memory_search`/`memory_get` 索引，但**不会合并进 bootstrap `MEMORY.md`**。源文件保持不变；发生 destination conflict 时先 preview，选择 replace 会创建 verified pre-import backup，并在 migration report 中保留被覆盖文件的 item-level copy。这个设计让“可搜索导入资料”和“已审阅的常驻核心”保持分离。
+
+#### 最小运维手册
+
+```bash
+# 快速查看所有 agent 的索引状态
+openclaw memory status
+
+# 连 provider/vector readiness 一起探测；会有额外 provider 调用
+openclaw memory status --deep --agent main
+
+# 索引 dirty 时重建，或强制完整重建
+openclaw memory status --index --agent main
+openclaw memory index --force --agent main
+
+# 从 CLI 搜索并检查结构化结果
+openclaw memory search "gateway network safety" --agent main --json
+
+# 修 stale recall lock 和 promotion metadata
+openclaw memory status --fix --agent main
+```
+
+常见诊断顺序是：先确认文件确实存在且没有超出/被截断的 bootstrap budget，再看 sources/scope，然后看 FTS、embedding provider 和 vector store，最后才调 `minScore`、结果数量或 reranking。召回为空经常是 source 或权限边界问题，不一定是 embedding model 不够好。
 
 ## 6. 一个具体例子：一条偏好如何成为长期记忆
 
@@ -911,9 +1209,14 @@ Hermes 也有丰富的外部 memory provider plugin，并定义 `prefetch(query)
 - [Agent runtimes](https://docs.openclaw.ai/concepts/agent-runtimes)
 - [Memory overview](https://docs.openclaw.ai/concepts/memory)
 - [Memory architecture](https://docs.openclaw.ai/concepts/memory-architecture)
+- [Builtin memory engine](https://docs.openclaw.ai/concepts/memory-builtin)
 - [Memory search](https://docs.openclaw.ai/concepts/memory-search)
 - [Active Memory](https://docs.openclaw.ai/concepts/active-memory)
 - [Dreaming](https://docs.openclaw.ai/concepts/dreaming)
+- [Memory configuration reference](https://docs.openclaw.ai/reference/memory-config)
+- [Memory CLI](https://docs.openclaw.ai/cli/memory)
+- [memory-core implementation](https://github.com/openclaw/openclaw/tree/main/extensions/memory-core)
+- [Active Memory implementation](https://github.com/openclaw/openclaw/tree/main/extensions/active-memory)
 - [Compaction](https://docs.openclaw.ai/concepts/compaction)
 - [Claude Code memory](https://code.claude.com/docs/en/memory)
 - [Codex app-server protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md)
