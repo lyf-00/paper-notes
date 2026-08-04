@@ -64,7 +64,7 @@ OpenClaw 的 release 与主分支文档演进很快。阅读 feature 时应先�
 OpenClaw 的 Gateway 是常驻 daemon，负责：
 
 - 维护 Telegram、Slack、Discord、WhatsApp 等 channel/provider 连接；
-- 提供类型化 WebSocket API，接收请求并推送 agent、chat、presence、health、heartbeat、automation 等事件；
+- 提供类型化 WebSocket API，接收请求并推送 agent、chat、presence、health、heartbeat、automation（按确定时间或周期触发的任务）等事件；
 - 管理设备身份、pairing、token 和非本地连接的信任边界；
 - 把消息解析成 session，再把 turn 交给选定 runtime；
 - 串行持久化 transcript、session metadata、scheduled work 和部分 memory index。
@@ -80,7 +80,7 @@ OpenClaw 的 Gateway 是常驻 daemon，负责：
 | Context | 模型这一次推理看见什么？ | system prompt、bootstrap files、近期消息、compact summary、召回片段、tool result |
 | Session / thread | 对话与执行属于哪条连续轨迹？ | session key、SQLite transcript、运行队列、channel routing metadata |
 | Memory | 哪些事实可跨会话保存并在未来选择性召回？ | `USER.md`、`MEMORY.md`、`memory/*.md`、索引与 memory plugin |
-| Automation / intent | 什么时候应该再次行动？ | scheduled tasks/cron、standing intent 的 SQLite 状态机 |
+| Automation / intent（前者由时间触发，后者由未来消息或事件触发） | 什么时候应该再次行动？ | scheduled tasks/cron、standing intent 的 SQLite 状态机 |
 
 “transcript 在磁盘上”不等于“模型能想起”；“写进 `MEMORY.md`”也不等于“权限已被强制执行”。Session 解决轨迹连续性，memory 解决未来选择性上下文，automation/intent 解决触发，sandbox/approval 才解决强制权限。
 
@@ -89,8 +89,130 @@ OpenClaw 的 Gateway 是常驻 daemon，负责：
 OpenClaw 当前同时支持多种 runtime ownership：
 
 - **OpenClaw embedded runtime**：OpenClaw 拥有 model loop、tool loop、transcript 与 compaction。
-- **Codex app-server runtime**：Codex 拥有原生 thread、agent loop、原生 shell/file tools 与 compaction；OpenClaw保留 channel delivery，镜像 transcript，并把 OpenClaw context 与动态工具投影给 Codex。
+- **Codex app-server runtime**：Codex 拥有原生 thread、agent loop、原生 shell/file tools 与 compaction；OpenClaw 保留 channel delivery，镜像 transcript，并把 OpenClaw context 与动态工具投影给 Codex。直观地说，**OpenClaw 负责“从哪里收到消息、把结果送回哪里，以及额外提供什么上下文和工具”，Codex 负责“这一轮怎样思考、调用原生工具和维护权威 thread”**。
 - **ACP/acpx 外部 runtime**：适用于显式要求 ACP 的 Codex，或 Claude Code、Gemini CLI、OpenCode、Cursor 等外部 harness。
+
+<details markdown="1">
+<summary><strong>点击展开：channel delivery、transcript mirror 与 context/tool projection 到底是什么意思？</strong></summary>
+
+这里描述的是一个**外层控制面包住内层 coding harness** 的结构，而不是 OpenClaw 和 Codex 同时控制同一份状态：
+
+```text
+Telegram / Slack / Web UI
+          │ inbound message
+          ▼
+OpenClaw Gateway
+  - 认证发送者、选择 agent/session
+  - 组装 OpenClaw context
+  - 暴露可桥接的动态工具
+          │ projected turn
+          ▼
+Codex app-server
+  - canonical Codex thread
+  - Codex agent loop
+  - Codex 原生 shell/file tools
+  - Codex compaction
+          │ events + final result
+          ▼
+OpenClaw transcript mirror + channel delivery
+          │
+          ▼
+原来的聊天渠道
+```
+
+#### 1. OpenClaw 保留 channel delivery
+
+消息入口和回复出口仍由 OpenClaw 管理。例如用户从 Telegram 发来任务：
+
+1. OpenClaw 验证 Telegram sender，解析应该进入哪个 agent 和 session；
+2. OpenClaw 把整理后的 turn 交给 Codex app-server；
+3. Codex 产生 progress、tool event 和最终回复；
+4. OpenClaw 再负责 Telegram 的格式转换、分片、重试、限流和最终发送。
+
+因此 Codex 不需要知道 Telegram bot token、Slack thread id 或消息重试策略。它只负责 agent turn，OpenClaw 负责现实渠道中的收发语义。
+
+#### 2. OpenClaw 镜像 transcript
+
+当使用 Codex app-server runtime 时，**Codex thread 是权威状态（canonical thread）**。OpenClaw 保存一份与渠道/session 对齐的 transcript mirror，供自己的 UI、routing、检索、恢复提示和交付状态使用。
+
+“镜像”不等于两边都是可随意改写的主数据库：
+
+- resume、fork、compaction 和原生 turn history 以 Codex thread 为准；
+- OpenClaw 接收 Codex runtime events，将可表示的消息和状态同步到自己的 transcript；
+- 镜像短暂落后时，不代表 Codex 的原生 thread 已经丢失；
+- OpenClaw 不应绕过 Codex protocol，直接重写 Codex 不支持修改的内部 history。
+
+这类似于 GitHub 是 issue 的权威数据源，而本地 dashboard 保存一份用于展示和搜索的同步副本：副本有用，但不能反过来假定自己拥有全部语义。
+
+#### 3. OpenClaw context 投影给 Codex
+
+OpenClaw 仍然拥有一些 Codex 原生 thread 之外的信息，例如：
+
+- 当前 channel、sender 和 OpenClaw agent/session 身份；
+- workspace bootstrap files、OpenClaw instructions 与 skills 摘要；
+- `USER.md`、`MEMORY.md` 或检索得到的 memory context；
+- OpenClaw plugin 在 `before_prompt_build` 等阶段生成的附加上下文。
+
+“投影”表示 OpenClaw 把这些信息转换成 **Codex 本轮可以接收的 submitted context**，随 turn 送入 Codex，而不是把它们永久写进 Codex 模型权重，也不等于把整个 OpenClaw 数据库复制进 Codex thread。
+
+可以把本轮模型输入近似理解为：
+
+$$
+\text{Codex turn context}
+= \text{Codex native thread context}
++ \text{OpenClaw projected context}
+$$
+
+其中 Codex 仍决定怎样压缩自己的 thread；OpenClaw 只能通过已支持的 runtime event、hook 和 submitted context 保持兼容。
+
+#### 4. OpenClaw 动态工具投影给 Codex
+
+OpenClaw plugin 可能在运行时才注册工具，例如消息发送、memory search 或某个连接器工具。这些不是 Codex 固定内置的 shell/file tool。OpenClaw adapter 会把允许的工具描述桥接到 Codex 当前 turn；Codex 选择调用后，请求回到 OpenClaw 执行，再把结果作为 tool result 返回 Codex loop。
+
+```text
+Codex 决定调用 memory_search
+  -> Codex/OpenClaw adapter
+  -> OpenClaw memory plugin 执行
+  -> 结果经过边界处理
+  -> 返回 Codex thread
+  -> Codex 继续生成回复
+```
+
+这里有三个限制：
+
+- Codex 原生 shell/file tools 仍由 Codex 及其 sandbox/approval policy 控制；
+- 只有 runtime adapter 和 hook 明确支持的 OpenClaw surface 才能被桥接，不能假设所有 plugin 行为自动生效；
+- 如果 Codex workspace 是只读的，投影一个 memory/tool 指令不会凭空获得写权限。
+
+#### 5. 最简判断方法
+
+遇到组合运行时的问题时，分别问：
+
+| 问题 | 主要 owner |
+|---|---|
+| Telegram/Slack 消息从哪里来、结果发到哪里？ | OpenClaw |
+| 当前代码 turn 怎样循环和调用原生文件工具？ | Codex |
+| 哪份 thread 是 resume/compaction 的权威状态？ | Codex |
+| OpenClaw UI 为什么还能显示这次对话？ | OpenClaw 保存 transcript mirror |
+| 用户偏好或 channel metadata 怎样进入 Codex？ | OpenClaw 将其投影为本轮 context |
+| OpenClaw plugin tool 怎样被 Codex 调用？ | Adapter 暴露 schema，OpenClaw 执行，结果返回 Codex |
+
+#### 6. Codex adapter 的官方源码入口
+
+下面这些链接指向 OpenClaw 官方仓库的当前 `main` 分支，可直接从“注册入口”一路追到“上下文与工具怎样进入 Codex”：
+
+| 代码位置 | 作用 |
+|---|---|
+| [`extensions/codex/index.ts`：注册 harness](https://github.com/openclaw/openclaw/blob/main/extensions/codex/index.ts#L162-L170) | Codex plugin 入口；调用 `registerAgentHarness(...)` 把 adapter 注册到 OpenClaw runtime |
+| [`extensions/codex/harness.ts`：harness 定义](https://github.com/openclaw/openclaw/blob/main/extensions/codex/harness.ts#L41-L70) | 定义 runtime identity、capabilities、delivery defaults，以及 attempt、usage、compaction、reset 等生命周期入口 |
+| [`extensions/codex/harness.ts`：执行 attempt](https://github.com/openclaw/openclaw/blob/main/extensions/codex/harness.ts#L174-L182) | 把一次 OpenClaw run 交给 Codex app-server，并开启 native hook relay |
+| [`extensions/codex/src/app-server/attempt-context.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/attempt-context.ts) | 组装 workspace bootstrap、memory context、developer instructions，并计算动态工具投影是否需要更新 |
+| [`extensions/codex/src/app-server/client.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/client.ts) | Codex app-server client、协议请求与事件连接的主要实现 |
+| [`extensions/codex/src/app-server/compact.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/codex/src/app-server/compact.ts) | Codex thread 的 native compaction 桥接 |
+
+这些是“源码地图”，不是稳定 API 承诺。`main` 分支的文件和行号可能随重构变化；做审计、引用或复现实验时，应把链接中的 `main` 换成具体 release tag 或 commit SHA。
+
+</details>
 
 这带来一个关键结论：**OpenClaw 与 Codex/Claude Code 不是完全互斥的横向竞品。** OpenClaw 可以处在更外层，负责渠道、身份、调度和持久状态，而把一次具体 turn 的内层循环交给 coding harness。对比时应分别比较“外层运行控制面”和“内层 agent loop”。
 
@@ -108,15 +230,130 @@ channel / UI message
   -> 装载 skills + bootstrap + memory/context
   -> model <-> tool loop
   -> stream assistant/tool/lifecycle events
-  -> transcript 与 usage 持久化
+  -> transcript（运行轨迹记录）与 usage（资源计量数据）持久化
   -> channel delivery
 ```
 
 这里的工程价值主要在三处：
 
 1. **每个 session 有自己的 lane。** 同一 session 的 run 串行执行，transcript append/rewrite 还经过 SQLite writer queue 和 session identity 检查，降低旧 run 覆盖新 generation 的风险。
-2. **接受与完成分离。** Gateway 可以先返回 `runId`，再由客户端监听 streaming events 或调用 wait；这比同步 CLI 调用更适合移动端、聊天渠道和长任务。
-3. **hooks 位于真实生命周期。** `before_prompt_build`、`before_tool_call`、`agent_end`、`before_compaction`、`message_sending` 等 hook 能围绕 model、tool、message 与 session 边界工作，而不只是往 system prompt 里塞一段文字。
+2. **接受与完成分离。** Gateway 可以先返回 `runId`——即这一次已被接受的运行实例的关联 ID——再由客户端监听 streaming events、查询状态或调用 wait。客户端不用一直占住最初的请求连接，也能在断线重连后继续追踪同一个长任务。
+3. **hooks 位于真实生命周期。** `before_prompt_build`、`before_tool_call`、`agent_end`、`before_compaction`、`message_sending` 等 hook 能围绕 model、tool、message 与 session 边界工作，例如注入本轮上下文、阻止危险工具调用、在压缩前落盘关键状态，或在发送前脱敏；它们不只是往 system prompt 里塞一段文字。
+
+<details markdown="1">
+<summary><strong>点击展开：transcript 和 usage 分别是什么？</strong></summary>
+
+#### Transcript：可恢复、可审计的运行轨迹
+
+`transcript` 是按 session/thread 组织的交互记录，通常包含用户消息、assistant 消息、工具调用、工具结果以及可表示的 lifecycle event。它的主要用途是：
+
+- 让 UI 重建“刚才发生了什么”；
+- 让 session resume、检索、调试和审计有持久依据；
+- 在 OpenClaw 包住 Codex 时，保存一份与 channel/session 对齐的 mirror。
+
+它不等于模型当轮看到的完整 `context`：context 还可能包含 system prompt、隐藏的 memory recall、bootstrap files 和压缩摘要，而 transcript 中的旧内容也可能因 compaction 不再逐字进入下一轮。它也不等于操作系统日志，更不应被理解为保存模型的私有推理过程。
+
+#### Usage：一次运行消耗了多少资源
+
+`usage` 是计量与观测数据，例如所用 provider/model、输入与输出 token、缓存 token、运行时长，以及在 provider 给出价格信息时可推导的成本。它主要用于预算、限额、成本展示、性能诊断和容量规划。
+
+例如，同一次 run 可以留下：
+
+```text
+transcript: 用户要求改文件 -> assistant 调用读取工具 -> 工具返回 -> assistant 给出结果
+usage:      model=gpt-5.x, input=8k tokens, output=1.2k tokens, duration=34s
+```
+
+因此 transcript 回答“发生了什么”，usage 回答“为此消耗了多少”。usage 不是用户画像，也不能替代 transcript 来恢复对话语义。
+
+</details>
+
+<details markdown="1">
+<summary><strong>点击展开：为什么先返回 runId？</strong></summary>
+
+把一次运行拆成“已接受”和“已完成”两个阶段，本质上是把长任务从一次脆弱的同步连接，变成一个可以被独立寻址的后台对象：
+
+```text
+客户端 POST agent/run
+  <- accepted: { runId: "run_42" }
+
+后台 run_42: queued -> running -> waiting_for_tool -> completed
+客户端可用 run_42: 订阅事件 / 查询状态 / wait / cancel
+```
+
+具体优势有六类：
+
+1. **请求不会被长任务绑死。** HTTP/WebSocket 入口可以很快确认接收；任务执行十分钟，也不要求最初那条请求连接保持十分钟。
+2. **断线后仍能恢复观察。** 手机切网、App 进入后台或 Gateway 重连后，客户端拿 `runId` 重新订阅或 wait，仍能定位原来的运行，而不是盲目再提交一次。
+3. **事件可以正确归属。** 多个 session 或多个 run 并发流式输出时，progress、tool event、usage 和终态都能用 `runId` 关联，避免 UI 把 A 任务的事件显示到 B 任务。
+4. **状态与控制面更清楚。** 服务端可以明确表示 `queued / running / completed / failed / cancelled`，客户端也能对指定 run 做 wait、取消或获取最终结果。
+5. **适合 channel delivery。** Telegram/Slack webhook 通常要求快速响应，Gateway 可以先确认收到，再在 run 完成后通过原 channel 异步交付，不受 webhook 超时限制。
+6. **便于可靠性与观测。** 排队时间、执行时间、重试、错误、usage 和最终 delivery 都能挂在同一个关联 ID 上，排障时可以追踪完整链路。
+
+一个移动端例子：用户提交代码审查，立即拿到 `run_42`；两秒后手机断网。任务仍在服务器运行。五分钟后用户重新打开 App，客户端用 `run_42` 查询，得到已完成结果并补拉漏掉的事件。若没有稳定 ID，客户端很难判断应该继续等、重新提交，还是任务其实已经完成；错误地重提还可能造成重复发消息或重复修改文件。
+
+但要注意三个边界：
+
+- 拿到 `runId` 只表示服务端**接受/登记了运行**，不表示运行成功；最终仍要检查 terminal status。
+- `wait` 超时通常只表示客户端不再等待，不必然停止后台 run；取消要使用明确的 cancel 语义。
+- `runId` 是关联标识，不天然等于幂等键。要防止“重试提交产生两个 run”，协议还需要 idempotency key、request key 或服务端去重规则。
+
+</details>
+
+<details markdown="1">
+<summary><strong>点击展开：lifecycle hooks 的实际例子</strong></summary>
+
+下面是概念化伪代码，用来说明每个 hook 所处的边界；具体参数名和返回结构应以安装版本的 plugin API 为准。
+
+| Hook | 发生时机 | 实际用途示例 |
+|---|---|---|
+| `before_prompt_build` | 模型输入组装前 | 给私聊注入用户偏好和项目摘要；给群聊省略私有 memory；根据 channel 添加回复格式要求 |
+| `before_tool_call` | 工具真正执行前 | 拒绝包含危险路径的 shell 参数；限制 message tool 的目标 channel；记录审计字段或规范化参数 |
+| `agent_end` | agent run 到达终态时 | 汇总 usage/耗时、更新任务台账、把候选事实交给异步 memory consolidation，或发出内部监控事件 |
+| `before_compaction` | 旧上下文被压缩前 | 把尚未落盘的决定、当前目标、关键文件路径和测试结果写入 durable daily note，再允许生成摘要 |
+| `message_sending` | 回复发往真实 channel 前 | 脱敏 token、阻止私有内容发到群聊、按 Telegram/Slack 限制分片，或在策略不满足时取消发送 |
+
+```ts
+// 概念示例 1：按 channel 控制上下文
+before_prompt_build(ctx) {
+  if (ctx.channel.kind === "direct") {
+    return { appendContext: loadPrivateUserPreferences(ctx.sender) };
+  }
+  return { appendContext: "这是群聊：不要调用或复述私有跨会话记忆。" };
+}
+
+// 概念示例 2：工具执行前做确定性检查
+before_tool_call(call) {
+  if (call.name === "exec" && touchesProtectedPath(call.args)) {
+    return { block: true, reason: "目标路径不在允许的 workspace 内" };
+  }
+}
+
+// 概念示例 3：压缩前保存仍需精确保留的状态
+before_compaction(session) {
+  appendDailyNote({
+    goal: session.currentGoal,
+    decisions: session.unflushedDecisions,
+    files: session.modifiedFiles,
+    tests: session.latestTestResults,
+  });
+}
+
+// 概念示例 4：发送前防止跨 channel 泄漏
+message_sending(message, route) {
+  const clean = redactSecrets(message);
+  if (route.kind === "group" && containsPrivateMemory(clean)) {
+    return { cancel: true, reason: "私有记忆不能发送到群聊" };
+  }
+  return { message: clean };
+}
+```
+
+这些 hook 的优势是它们能作用于**真实对象和真实时机**。例如，在 system prompt 里写“不要访问受保护路径”只是软指令；`before_tool_call` 可以在执行边界确定性阻断。类似地，“请在压缩前记住重要信息”只是希望模型配合，而 `before_compaction` 至少提供了一个明确、可测试的落盘时点。
+
+不过 hook 仍不自动等于强安全边界：插件可能有 bug，也可能只覆盖某一种 runtime。危险文件操作仍应由 sandbox、OS 权限和 approval 兜底；发送外部消息仍应使用明确的 channel policy 与 allowlist。
+
+</details>
 
 ## 5. Memory System：真正的核心
 
@@ -281,6 +518,8 @@ daily note 默认按 30 天半衰期衰减，`MEMORY.md` 与 `USER.md` 等 curat
 
 “记得我喜欢 TypeScript”是 retrospective memory；“下周五提醒我发布”是 time-triggered action；“下次提到发布时提醒我检查 changelog”是 event-triggered intent。三者不能只写在一个 Markdown 文件里。
 
+最短区分是：**Memory 记住事实，Automation 在时间到达时行动，Intent 在未来事件出现时行动。**
+
 OpenClaw 的当前设计是：
 
 - 时间触发 → scheduled task/cron；
@@ -288,6 +527,110 @@ OpenClaw 的当前设计是：
 - 无法编译的愿望 → Markdown，并带 review date。
 
 Standing intent 有 `pending / armed / fired / done / cancelled / expired` 生命周期，默认 cooldown、触发次数预算和过期时间由确定性代码执行。这一点是 OpenClaw 相比许多“把 TODO 写进 memory，然后希望模型以后想起来”的系统更成熟的地方。
+
+<details markdown="1">
+<summary><strong>点击展开：Automation 与 Standing Intent 的完整区别</strong></summary>
+
+#### 1. Automation：由时间触发
+
+Automation 也叫 scheduled task，旧界面或命令中常见 cron。它表达的是：
+
+> 到达一个确定时间，或者经过一个固定/动态周期后，自动启动任务。
+
+例如：
+
+- 明天上午 9 点提醒我开会；
+- 每周一生成项目周报；
+- 每 30 分钟检查服务健康状态；
+- 8 月 10 日重新检查 OpenClaw 是否发布新稳定版。
+
+```text
+时钟或 schedule 条件成立
+  -> scheduler 创建一次 run
+  -> agent 执行检查或操作
+  -> 保存结果或发送通知
+```
+
+它适合“**什么时候做**”已经能够用时间表达的任务。即使这段时间没有任何用户消息，scheduler 仍能唤醒任务。
+
+#### 2. Standing Intent：由未来消息或事件触发
+
+Standing Intent 表达的是：
+
+> 当未来对话出现某个话题、发送者、channel 或语义事件时，在那一轮提醒或指导 agent。
+
+例如：
+
+- 下次讨论发布时，提醒我检查 changelog；
+- Alice 再提到 API migration 时，给出上次的设计结论；
+- 有人询问退款时，先提醒我核对订单状态；
+- 未来消息提到 OpenClaw 7.2 正式版时，提醒我更新这篇笔记。
+
+```text
+收到一条新消息
+  -> 确定性 prefilter 检查 armed intents
+  -> 匹配 keyword / embedding / sender / channel scope
+  -> 将命中的 intent 注入当前 turn
+  -> agent 在本轮提醒或执行
+```
+
+如果一直没有相关消息，Intent 就不会触发。它不是后台持续轮询器；需要主动检查外部状态时，应使用 Automation。
+
+#### 3. 为什么 Intent 要用状态机
+
+一条 Intent 通常不仅有文本，还要保存机器可检查的生命周期：
+
+```text
+pending -> armed -> fired -> done
+                  ├-> cancelled
+                  └-> expired
+```
+
+典型字段包括：
+
+| 字段 | 作用 |
+|---|---|
+| keywords / trigger embedding | 定义什么消息可能触发 |
+| channel / sender scope | 限制在哪个会话、由谁说出时才有效 |
+| expiry | 过期后不再触发 |
+| fire budget | 最多允许提醒多少次 |
+| cooldown | 两次触发至少间隔多久，避免每句话都唠叨 |
+| state | 区分待激活、已激活、已完成、取消和过期 |
+
+这些字段由确定性代码执行，比让模型每轮从一句自然语言 TODO 中重新猜测是否该行动更可靠。
+
+#### 4. 三者怎样选择
+
+| 用户表达 | 正确载体 | 原因 |
+|---|---|---|
+| “我喜欢简洁的中文回答” | Memory / `USER.md` | 这是稳定偏好 |
+| “明天 9 点提醒我提交报告” | Automation | 触发条件是时间 |
+| “下次聊到数据库迁移时提醒我先备份” | Standing Intent | 触发条件是未来对话事件 |
+| “每小时检查一次数据库是否恢复” | Automation | 需要后台定期主动检查 |
+| “数据库恢复的消息出现时告诉我” | Intent，前提是相关消息会进入 OpenClaw | 依赖收到事件，而不是主动轮询 |
+| “API migration 当前由 Alice 负责” | Memory | 这是当前事实；若责任会变化，应附 observed date/expiry |
+
+#### 5. 常见错误
+
+把下面一句只写进 `MEMORY.md`：
+
+```text
+下周五提醒用户提交报告。
+```
+
+并不能保证周五发生任何事，因为 memory 只是未来可能被读到的上下文，没有时钟触发器。类似地，把“下次讨论发布时提醒检查 changelog”做成每天运行的 cron，会产生无意义轮询。
+
+一句话记忆：
+
+```text
+Memory = 未来需要知道什么
+Automation = 到什么时间要行动
+Intent = 遇到什么事件要行动
+```
+
+版本注意：Standing Intent 属于 OpenClaw 较新的 prospective-memory 方向，具体命令、默认值和是否可用取决于安装版本；它不是普通 Markdown memory 的别名。
+
+</details>
 
 ### 5.11 Backend 与知识层
 
